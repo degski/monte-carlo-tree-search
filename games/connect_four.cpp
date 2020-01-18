@@ -14,7 +14,7 @@ void main_program()
 
 	bool human_player = true;
 
-	MCTS::ComputeOptions player1_options, player2_options;
+	Mcts::ComputeOptions player1_options, player2_options;
 	player1_options.max_iterations = 100000;
 	player1_options.verbose = true;
 	player2_options.max_iterations =  10000;
@@ -26,7 +26,7 @@ void main_program()
 
 		ConnectFourState::Move move = ConnectFourState::no_move;
 		if (state.player_to_move == 1) {
-			move = MCTS::compute_move(state, player1_options);
+			move = Mcts::compute_move(state, player1_options);
 			state.do_move(move);
 		}
 		else {
@@ -45,7 +45,7 @@ void main_program()
 				}
 			}
 			else {
-				move = MCTS::compute_move(state, player2_options);
+				move = Mcts::compute_move(state, player2_options);
 				state.do_move(move);
 			}
 		}
