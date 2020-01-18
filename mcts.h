@@ -19,13 +19,13 @@ class GameState
 {
 public:
     typedef int Move;
-    static const Move no_move = ...
+    static Move const no_move = ...
 
     void do_move(Move move);
     template<typename RandomEngine>
     void do_random_move(*engine);
     bool has_moves() const;
-    std::vector<Move> get_moves() const;
+    std::std::vector<Move> get_moves() const;
 
     // Returns a value in {0, 0.5, 1}.
     // This should not be an evaluation function, because it will only be
@@ -51,7 +51,7 @@ namespace Mcts {
 struct ComputeOptions;
 
 template<typename State>
-typename State::Move compute_move ( const State root_state, const ComputeOptions options = ComputeOptions ( ) );
+typename State::Move compute_move ( State const root_state, const ComputeOptions options = ComputeOptions ( ) );
 
 } // namespace Mcts
 
@@ -91,21 +91,16 @@ struct ComputeOptions {
         verbose ( false ) {}
 };
 
-using std::cerr;
-using std::endl;
-using std::size_t;
-using std::vector;
-
-static void check ( bool expr, const char * message );
-static void assertion_failed ( const char * expr, const char * file, int line );
+static void check ( bool expr, char const * message );
+static void assertion_failed ( char const * expr, char const * file, int line );
 
 #define attest( expr )                                                                                                             \
-    if ( !( expr ) ) {                                                                                                             \
+    if ( not( expr ) ) {                                                                                                           \
         ::Mcts::assertion_failed ( #expr, __FILE__, __LINE__ );                                                                    \
     }
 #ifndef NDEBUG
 #    define dattest( expr )                                                                                                        \
-        if ( !( expr ) ) {                                                                                                         \
+        if ( not( expr ) ) {                                                                                                       \
             ::Mcts::assertion_failed ( #expr, __FILE__, __LINE__ );                                                                \
         }
 #else
@@ -121,26 +116,29 @@ class Node {
     public:
     typedef typename State::Move Move;
 
-    Node ( const State & state );
+    Node ( State const & state );
+    Node ( const Node & ) = delete;
+
     ~Node ( );
 
-    bool has_untried_moves ( ) const;
+    Node & operator= ( const Node & ) = delete;
+    bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
-    Move get_untried_move ( RandomEngine * engine ) const;
-    Node * best_child ( ) const;
+    Move get_untried_move ( RandomEngine * engine ) const noexcept;
+    Node * best_child ( ) const noexcept;
 
-    bool has_children ( ) const { return !children.empty ( ); }
+    bool has_children ( ) const noexcept { return not children.empty ( ); }
 
-    Node * select_child_UCT ( ) const;
-    Node * add_child ( const Move & move, const State & state );
+    Node * select_child_UCT ( ) const noexcept;
+    Node * add_child ( Move const & move, State const & state );
     void update ( double result );
 
     std::string to_string ( ) const;
     std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
 
-    const Move move;
+    Move const move;
     Node * const parent;
-    const int player_to_move;
+    int const player_to_move;
 
     // std::atomic<double> wins;
     // std::atomic<int> visits;
@@ -151,12 +149,9 @@ class Node {
     std::vector<Node *> children;
 
     private:
-    Node ( const State & state, const Move & move, Node * parent );
+    Node ( State const & state, Move const & move, Node * parent );
 
     std::string indent_string ( int indent ) const;
-
-    Node ( const Node & );
-    Node & operator= ( const Node & );
 
     double UCT_score;
 };
@@ -165,62 +160,59 @@ class Node {
 /////////////////////////////////////////////////////////
 
 template<typename State>
-Node<State>::Node ( const State & state ) :
+Node<State>::Node ( State const & state ) :
     move ( State::no_move ), parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0 ), visits ( 0 ),
     moves ( state.get_moves ( ) ), UCT_score ( 0 ) {}
 
 template<typename State>
-Node<State>::Node ( const State & state, const Move & move_, Node * parent_ ) :
+Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
     move ( move_ ), parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0 ), visits ( 0 ),
     moves ( state.get_moves ( ) ), UCT_score ( 0 ) {}
 
 template<typename State>
-Node<State>::~Node ( ) {
+Node<State>::~Node ( ) noexcept {
     for ( auto child : children ) {
         delete child;
     }
 }
 
 template<typename State>
-bool Node<State>::has_untried_moves ( ) const {
-    return !moves.empty ( );
+bool Node<State>::has_untried_moves ( ) const noexcept {
+    return not moves.empty ( );
 }
 
 template<typename State>
 template<typename RandomEngine>
-typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) const {
-    attest ( !moves.empty ( ) );
+typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) const noexcept {
+    attest ( not moves.empty ( ) );
     std::uniform_int_distribution<std::size_t> moves_distribution ( 0, moves.size ( ) - 1 );
     return moves[ moves_distribution ( *engine ) ];
 }
 
 template<typename State>
-Node<State> * Node<State>::best_child ( ) const {
+Node<State> * Node<State>::best_child ( ) const noexcept {
     attest ( moves.empty ( ) );
-    attest ( !children.empty ( ) );
-
+    attest ( not children.empty ( ) );
     return *std::max_element ( children.begin ( ), children.end ( ), [] ( Node * a, Node * b ) { return a->visits < b->visits; } );
     ;
 }
 
 template<typename State>
-Node<State> * Node<State>::select_child_UCT ( ) const {
-    attest ( !children.empty ( ) );
+Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
+    attest ( not children.empty ( ) );
     for ( auto child : children ) {
         child->UCT_score = double ( child->wins ) / double ( child->visits ) +
                            std::sqrt ( 2.0 * std::log ( double ( this->visits ) ) / child->visits );
     }
-
     return *std::max_element ( children.begin ( ), children.end ( ),
                                [] ( Node * a, Node * b ) { return a->UCT_score < b->UCT_score; } );
 }
 
 template<typename State>
-Node<State> * Node<State>::add_child ( const Move & move, const State & state ) {
+Node<State> * Node<State>::add_child ( Move const & move, State const & state ) {
     auto node = new Node ( state, move, this );
     children.push_back ( node );
-    attest ( !children.empty ( ) );
-
+    attest ( not children.empty ( ) );
     auto itr = moves.begin ( );
     for ( ; itr != moves.end ( ) && *itr != move; ++itr )
         ;
@@ -233,10 +225,9 @@ Node<State> * Node<State>::add_child ( const Move & move, const State & state ) 
 template<typename State>
 void Node<State>::update ( double result ) {
     visits++;
-
     wins += result;
     // double my_wins = wins.load();
-    // while ( ! wins.compare_exchange_strong(my_wins, my_wins + result));
+    // while ( not  wins.compare_exchange_strong(my_wins, my_wins + result));
 }
 
 template<typename State>
@@ -252,23 +243,19 @@ std::string Node<State>::to_string ( ) const {
 
 template<typename State>
 std::string Node<State>::tree_to_string ( int max_depth, int indent ) const {
-    if ( indent >= max_depth ) {
+    if ( indent >= max_depth )
         return "";
-    }
-
     std::string s = indent_string ( indent ) + to_string ( );
-    for ( auto child : children ) {
+    for ( auto child : children )
         s += child->tree_to_string ( max_depth, indent + 1 );
-    }
     return s;
 }
 
 template<typename State>
 std::string Node<State>::indent_string ( int indent ) const {
     std::string s = "";
-    for ( int i = 1; i <= indent; ++i ) {
+    for ( int i = 1; i <= indent; ++i )
         s += "| ";
-    }
     return s;
 }
 
@@ -281,14 +268,14 @@ inline double wall_time ( ) noexcept {
 }
 
 template<typename State>
-std::unique_ptr<Node<State>> compute_tree ( const State root_state, const ComputeOptions options,
+std::unique_ptr<Node<State>> compute_tree ( State const root_state, const ComputeOptions options,
                                             std::mt19937_64::result_type initial_seed ) {
+
     std::mt19937_64 random_engine ( initial_seed );
 
     attest ( options.max_iterations >= 0 || options.max_time >= 0 );
-
-    // Will support more players later.
     attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
+
     auto root = std::unique_ptr<Node<State>> ( new Node<State> ( root_state ) );
 
     double start_time = wall_time ( );
@@ -299,7 +286,7 @@ std::unique_ptr<Node<State>> compute_tree ( const State root_state, const Comput
         State state = root_state;
 
         // Select a path through the tree to a leaf node.
-        while ( !node->has_untried_moves ( ) && node->has_children ( ) ) {
+        while ( not node->has_untried_moves ( ) && node->has_children ( ) ) {
             node = node->select_child_UCT ( );
             state.do_move ( node->move );
         }
@@ -313,13 +300,12 @@ std::unique_ptr<Node<State>> compute_tree ( const State root_state, const Comput
         }
 
         // We now play randomly until the game ends.
-        while ( state.has_moves ( ) ) {
+        while ( state.has_moves ( ) )
             state.do_random_move ( &random_engine );
-        }
 
         // We have now reached a final state. Backpropagate the result
         // up the tree to the root node.
-        while ( node != nullptr ) {
+        while ( node ) {
             node->update ( state.get_result ( node->player_to_move ) );
             node = node->parent;
         }
@@ -327,13 +313,12 @@ std::unique_ptr<Node<State>> compute_tree ( const State root_state, const Comput
         if ( options.verbose || options.max_time >= 0 ) {
             double time = wall_time ( );
             if ( options.verbose && ( time - print_time >= 1.0 || iter == options.max_iterations ) ) {
-                std::cerr << iter << " games played (" << double ( iter ) / ( time - start_time ) << " / second)." << endl;
+                std::cerr << iter << " games played (" << double ( iter ) / ( time - start_time ) << " / second)." << std::endl;
                 print_time = time;
             }
 
-            if ( time - start_time >= options.max_time ) {
+            if ( time - start_time >= options.max_time )
                 break;
-            }
         }
     }
 
@@ -341,42 +326,43 @@ std::unique_ptr<Node<State>> compute_tree ( const State root_state, const Comput
 }
 
 template<typename State>
-typename State::Move compute_move ( const State root_state, const ComputeOptions options ) {
-    using namespace std;
+typename State::Move compute_move ( State const root_state, const ComputeOptions options ) {
 
-    // Will support more players later.
     attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
 
     auto moves = root_state.get_moves ( );
+
     attest ( moves.size ( ) > 0 );
-    if ( moves.size ( ) == 1 ) {
+
+    if ( moves.size ( ) == 1 )
         return moves[ 0 ];
-    }
 
     double start_time = wall_time ( );
 
     // Start all jobs to compute trees.
-    vector<future<unique_ptr<Node<State>>>> root_futures;
+    std::vector<future<std::unique_ptr<Node<State>>>> root_futures;
     ComputeOptions job_options = options;
     job_options.verbose        = false;
+
     for ( int t = 0; t < options.number_of_threads; ++t ) {
         auto func = [ t, &root_state, &job_options ] ( ) -> std::unique_ptr<Node<State>> {
             return compute_tree ( root_state, job_options, 1012411 * t + 12515 );
         };
-
         root_futures.push_back ( std::async ( std::launch::async, func ) );
     }
 
     // Collect the results.
-    vector<unique_ptr<Node<State>>> roots;
-    for ( int t = 0; t < options.number_of_threads; ++t ) {
+    std::vector<std::unique_ptr<Node<State>>> roots;
+
+    for ( int t = 0; t < options.number_of_threads; ++t )
         roots.push_back ( std::move ( root_futures[ t ].get ( ) ) );
-    }
 
     // Merge the children of all root nodes.
-    map<typename State::Move, int> visits;
-    map<typename State::Move, double> wins;
-    long long games_played = 0;
+    std::map<typename State::Move, int> visits;
+    std::map<typename State::Move, double> wins;
+
+    std::int64_t games_played = 0;
+
     for ( int t = 0; t < options.number_of_threads; ++t ) {
         auto root = roots[ t ].get ( );
         games_played += root->visits;
@@ -402,25 +388,25 @@ typename State::Move compute_move ( const State root_state, const ComputeOptions
         }
 
         if ( options.verbose ) {
-            cerr << "Move: " << itr.first << " (" << setw ( 2 ) << right << int ( 100.0 * v / double ( games_played ) + 0.5 )
-                 << "% visits)"
-                 << " (" << setw ( 2 ) << right << int ( 100.0 * w / v + 0.5 ) << "% wins)" << endl;
+            std::cerr << "Move: " << itr.first << " (" << setw ( 2 ) << right << int ( 100.0 * v / double ( games_played ) + 0.5 )
+                      << "% visits)"
+                      << " (" << setw ( 2 ) << right << int ( 100.0 * w / v + 0.5 ) << "% wins)" << std::endl;
         }
     }
 
     if ( options.verbose ) {
         auto best_wins   = wins[ best_move ];
         auto best_visits = visits[ best_move ];
-        cerr << "----" << endl;
-        cerr << "Best: " << best_move << " (" << 100.0 * best_visits / double ( games_played ) << "% visits)"
-             << " (" << 100.0 * best_wins / best_visits << "% wins)" << endl;
+        std::cerr << "----" << std::endl;
+        std::cerr << "Best: " << best_move << " (" << 100.0 * best_visits / double ( games_played ) << "% visits)"
+                  << " (" << 100.0 * best_wins / best_visits << "% wins)" << std::endl;
     }
 
     if ( options.verbose ) {
         double time = wall_time ( );
         std::cerr << games_played << " games played in " << double ( time - start_time ) << " s. "
                   << "(" << double ( games_played ) / ( time - start_time ) << " / second, " << options.number_of_threads
-                  << " parallel jobs)." << endl;
+                  << " parallel jobs)." << std::endl;
     }
 
     return best_move;
@@ -429,26 +415,21 @@ typename State::Move compute_move ( const State root_state, const ComputeOptions
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 
-static void check ( bool expr, const char * message ) {
-    if ( !expr ) {
+inline void check ( bool expr, char const * message ) {
+    if ( not expr )
         throw std::invalid_argument ( message );
-    }
 }
 
-static void assertion_failed ( const char * expr, const char * file_cstr, int line ) {
-    using namespace std;
-
+inline void assertion_failed ( char const * expr, char const * file_cstr, int line ) {
     // Extract the file name only.
-    string file ( file_cstr );
+    std::string file ( file_cstr );
     auto pos = file.find_last_of ( "/\\" );
-    if ( pos == string::npos ) {
+    if ( pos == std::string::npos )
         pos = 0;
-    }
     file = file.substr ( pos + 1 ); // Returns empty string if pos + 1 == length.
-
-    stringstream sout;
+    std::stringstream sout;
     sout << "Assertion failed: " << expr << " in " << file << ":" << line << ".";
-    throw runtime_error ( sout.str ( ).c_str ( ) );
+    throw std::runtime_error ( sout.str ( ).c_str ( ) );
 }
 
 } // namespace Mcts
