@@ -116,7 +116,7 @@ class alignas ( 64 ) Node {
 
     public:
     using Move            = typename State::Move;
-    using Moves           = std::vector<Move>;
+    using Moves           = typename State::Moves;
     using moves_size_type = typename Moves::size_type;
 
     Node ( State const & state );

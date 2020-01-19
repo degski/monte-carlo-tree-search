@@ -9,7 +9,8 @@ using namespace std;
 
 class ConnectFourState {
     public:
-    typedef int Move;
+    using Move                = int;
+    using Moves               = std::vector<Move>;
     static const Move no_move = -1;
 
     static const char player_markers[ 3 ];
@@ -65,11 +66,11 @@ class ConnectFourState {
         return false;
     }
 
-    std::vector<Move> get_moves ( ) const {
+    Moves get_moves ( ) const {
         // std::cout << "in" << '\n';
         check_invariant ( );
 
-        std::vector<Move> moves;
+        Moves moves;
         if ( get_winner ( ) != player_markers[ 0 ] ) {
             return moves;
         }
