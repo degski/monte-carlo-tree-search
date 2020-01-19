@@ -9,7 +9,7 @@
 class ConnectFourState {
     public:
     using Move                = int;
-    using Moves               = std::vector<Move>;
+    using Moves               = sax::compact_vector<Move>;
     static const Move no_move = -1;
 
     static const char player_markers[ 3 ];
@@ -65,44 +65,31 @@ class ConnectFourState {
         return false;
     }
 
-    Moves get_moves ( ) const {
-        // std::cout << "in" << '\n';
+    [[nodiscard]] Moves get_moves ( ) const {
         check_invariant ( );
-
         Moves moves;
-        if ( get_winner ( ) != player_markers[ 0 ] ) {
+        if ( get_winner ( ) != player_markers[ 0 ] )
             return moves;
-        }
-
         moves.reserve ( num_cols );
-
-        for ( int col = 0; col < num_cols; ++col ) {
-            if ( board[ 0 ][ col ] == player_markers[ 0 ] ) {
+        for ( int col = 0; col < num_cols; ++col )
+            if ( board[ 0 ][ col ] == player_markers[ 0 ] )
                 moves.push_back ( col );
-            }
-        }
-        // std::cout << "out" << '\n';
         return moves;
     }
 
-    char get_winner ( ) const {
-        if ( last_col < 0 ) {
+    [[nodiscard]] char get_winner ( ) const noexcept {
+        if ( last_col < 0 )
             return player_markers[ 0 ];
-        }
-
         // We only need to check around the last piece played.
         auto piece = board[ last_row ][ last_col ];
-
         // X X X X
         int left = 0, right = 0;
         for ( int col = last_col - 1; col >= 0 && board[ last_row ][ col ] == piece; --col )
             left++;
         for ( int col = last_col + 1; col < num_cols && board[ last_row ][ col ] == piece; ++col )
             right++;
-        if ( left + 1 + right >= 4 ) {
+        if ( left + 1 + right >= 4 )
             return piece;
-        }
-
         // X
         // X
         // X
@@ -112,10 +99,8 @@ class ConnectFourState {
             up++;
         for ( int row = last_row + 1; row < num_rows && board[ row ][ last_col ] == piece; ++row )
             down++;
-        if ( up + 1 + down >= 4 ) {
+        if ( up + 1 + down >= 4 )
             return piece;
-        }
-
         // X
         //  X
         //   X
@@ -127,10 +112,8 @@ class ConnectFourState {
         for ( int row = last_row + 1, col = last_col + 1; row < num_rows && col < num_cols && board[ row ][ col ] == piece;
               ++row, ++col )
             down++;
-        if ( up + 1 + down >= 4 ) {
+        if ( up + 1 + down >= 4 )
             return piece;
-        }
-
         //    X
         //   X
         //  X
@@ -141,10 +124,8 @@ class ConnectFourState {
             up++;
         for ( int row = last_row - 1, col = last_col + 1; row >= 0 && col < num_cols && board[ row ][ col ] == piece; --row, ++col )
             down++;
-        if ( up + 1 + down >= 4 ) {
+        if ( up + 1 + down >= 4 )
             return piece;
-        }
-
         return player_markers[ 0 ];
     }
 

@@ -44,23 +44,14 @@
 // following function (tries to) compute the best move for the
 // player to move.
 //
-
-#pragma once
-
-namespace Mcts {
-
-struct ComputeOptions;
-
-template<typename State>
-typename State::Move compute_move ( State const root_state, const ComputeOptions options = ComputeOptions ( ) );
-
-} // namespace Mcts
-
 //
 // [1] Chaslot, G. M. B., Winands, M. H., & van Den Herik, H. J. (2008).
 //     Parallel monte-carlo tree search. In Computers and Games (pp.
 //     60-71). Springer Berlin Heidelberg.
 //
+//
+
+#pragma once
 
 #include <algorithm>
 #include <chrono>
@@ -77,6 +68,8 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
 #include <thread>
 #include <vector>
 
+#define USE_MIMALLOC false
+
 #include "../compact_vector/include/compact_vector.hpp"
 
 namespace Mcts {
@@ -92,6 +85,9 @@ struct ComputeOptions {
         number_of_threads ( 3 ), max_iterations ( 10'000 ), max_time ( -1.0 ), // default is no time limit.
         verbose ( false ) {}
 };
+
+template<typename State>
+typename State::Move compute_move ( State const root_state, const ComputeOptions options = ComputeOptions ( ) );
 
 static void check ( bool expr, char const * message );
 static void assertion_failed ( char const * expr, char const * file, int line );
@@ -164,12 +160,12 @@ class alignas ( 64 ) Node {
 
 template<typename State>
 Node<State>::Node ( State const & state ) :
-    parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ), moves ( state.get_moves ( ) ),
+    parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
     UCT_score ( 0.0 ), move ( State::no_move ) {}
 
 template<typename State>
 Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
-    parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ), moves ( state.get_moves ( ) ),
+    parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
     UCT_score ( 0.0 ), move ( move_ ) {}
 
 template<typename State>
