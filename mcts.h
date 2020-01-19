@@ -114,6 +114,7 @@ class alignas ( 64 ) Node {
     using Move            = typename State::Move;
     using Moves           = typename State::Moves;
     using moves_size_type = typename Moves::size_type;
+    using Children        = sax::compact_vector<Node *>;
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
@@ -144,8 +145,8 @@ class alignas ( 64 ) Node {
     int visits;
     double wins; // 24
 
-    Moves moves;                  // 32
-    std::vector<Node *> children; // 40
+    Moves moves;       // 32
+    Children children; // 40
 
     private:
     Node ( State const & state, Move const & move, Node * parent );
@@ -170,8 +171,9 @@ Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
 
 template<typename State>
 Node<State>::~Node ( ) noexcept {
-    for ( auto child : children )
-        delete child;
+    if ( not children.empty ( ) )
+        for ( auto child : children )
+            delete child;
 }
 
 template<typename State>
