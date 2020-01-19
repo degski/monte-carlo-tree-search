@@ -66,6 +66,7 @@ class ConnectFourState {
     }
 
     std::vector<Move> get_moves ( ) const {
+        // std::cout << "in" << '\n';
         check_invariant ( );
 
         std::vector<Move> moves;
@@ -80,6 +81,7 @@ class ConnectFourState {
                 moves.push_back ( col );
             }
         }
+        // std::cout << "out" << '\n';
         return moves;
     }
 

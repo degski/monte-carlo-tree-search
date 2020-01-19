@@ -77,6 +77,8 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
 #include <thread>
 #include <vector>
 
+#include "../compact_vector/include/compact_vector.hpp"
+
 namespace Mcts {
 
 struct ComputeOptions {
@@ -87,7 +89,7 @@ struct ComputeOptions {
     bool verbose;
 
     ComputeOptions ( ) :
-        number_of_threads ( 3 ), max_iterations ( 10000 ), max_time ( -1.0 ), // default is no time limit.
+        number_of_threads ( 3 ), max_iterations ( 10'000 ), max_time ( -1.0 ), // default is no time limit.
         verbose ( false ) {}
 };
 
@@ -110,10 +112,12 @@ static void assertion_failed ( char const * expr, char const * file, int line );
 // This class is used to build the game tree. The root is created by the users and
 // the rest of the tree is created by add_node.
 template<typename State>
-class Node {
+class alignas ( 64 ) Node {
 
     public:
-    using Move = typename State::Move;
+    using Move            = typename State::Move;
+    using Moves           = std::vector<Move>;
+    using moves_size_type = typename Moves::size_type;
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
@@ -135,36 +139,38 @@ class Node {
     std::string to_string ( ) const;
     std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
 
-    Move const move;
-    Node * const parent;
+    Node * const parent; // 8
     int const player_to_move;
 
     // std::atomic<double> wins;
     // std::atomic<int> visits;
 
-    double wins;
     int visits;
+    double wins; // 24
 
-    std::vector<Move> moves;
-    std::vector<Node *> children;
+    Moves moves;                  // 32
+    std::vector<Node *> children; // 40
 
     private:
     Node ( State const & state, Move const & move, Node * parent );
 
     std::string indent_string ( int indent ) const;
 
-    double UCT_score;
+    double UCT_score; // 48
+
+    public:
+    Move const move; // 4
 };
 
 template<typename State>
 Node<State>::Node ( State const & state ) :
-    move ( State::no_move ), parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ),
-    moves ( state.get_moves ( ) ), UCT_score ( 0.0 ) {}
+    parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ), moves ( state.get_moves ( ) ),
+    UCT_score ( 0.0 ), move ( State::no_move ) {}
 
 template<typename State>
 Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
-    move ( move_ ), parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ),
-    moves ( state.get_moves ( ) ), UCT_score ( 0.0 ) {}
+    parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ), moves ( state.get_moves ( ) ),
+    UCT_score ( 0.0 ), move ( move_ ) {}
 
 template<typename State>
 Node<State>::~Node ( ) noexcept {
@@ -181,7 +187,7 @@ template<typename State>
 template<typename RandomEngine>
 typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) const noexcept {
     attest ( not moves.empty ( ) );
-    std::uniform_int_distribution<std::size_t> moves_distribution ( 0, moves.size ( ) - 1 );
+    std::uniform_int_distribution<moves_size_type> moves_distribution ( 0, moves.size ( ) - 1 );
     return moves[ moves_distribution ( *engine ) ];
 }
 
