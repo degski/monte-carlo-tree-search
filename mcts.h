@@ -1,9 +1,12 @@
 
-#pragma once
-
+//
+// MIT License.
 //
 // Petter Strandmark 2013
 // petter.strandmark@gmail.com
+//
+// degski 2020
+// degski@gmail.com
 //
 // Monte Carlo Tree Search for finite games.
 //
@@ -13,38 +16,37 @@
 // Uses the "root parallelization" technique [1].
 //
 // This game engine can play any game defined by a state like this:
-/*
-
-class GameState
-{
-public:
-    typedef int Move;
-    static Move const no_move = ...
-
-    void do_move(Move move);
-    template<typename RandomEngine>
-    void do_random_move(*engine);
-    bool has_moves() const;
-    std::std::vector<Move> get_moves() const;
-
-    // Returns a value in {0, 0.5, 1}.
-    // This should not be an evaluation function, because it will only be
-    // called for finished games. Return 0.5 to indicate a draw.
-    double get_result(int current_player_to_move) const;
-
-    int player_to_move;
-
-    // ...
-private:
-    // ...
-};
-
-*/
+//
+// class GameState {
+//
+// public:
+//     typedef int Move;
+//     static Move const no_move = ...
+//
+//     void do_move(Move move);
+//     template<typename RandomEngine>
+//     void do_random_move(*engine);
+//     bool has_moves() const;
+//     std::std::vector<Move> get_moves() const;
+//
+//     // Returns a value in {0, 0.5, 1}.
+//     // This should not be an evaluation function, because it will only be
+//     // called for finished games. Return 0.5 to indicate a draw.
+//     double get_result(int current_player_to_move) const;
+//
+//     int player_to_move;
+//
+//     // ...
+// private:
+//     // ...
+// };
 //
 // See the examples for more details. Given a suitable State, the
 // following function (tries to) compute the best move for the
 // player to move.
 //
+
+#pragma once
 
 namespace Mcts {
 
@@ -55,7 +57,6 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
 
 } // namespace Mcts
 
-//
 //
 // [1] Chaslot, G. M. B., Winands, M. H., & van Den Herik, H. J. (2008).
 //     Parallel monte-carlo tree search. In Computers and Games (pp.
@@ -107,10 +108,8 @@ static void assertion_failed ( char const * expr, char const * file, int line );
 #    define dattest( expr ) ( ( void ) 0 )
 #endif
 
-//
 // This class is used to build the game tree. The root is created by the users and
 // the rest of the tree is created by add_node.
-//
 template<typename State>
 class Node {
     public:
@@ -142,6 +141,7 @@ class Node {
 
     // std::atomic<double> wins;
     // std::atomic<int> visits;
+
     double wins;
     int visits;
 
@@ -155,9 +155,6 @@ class Node {
 
     double UCT_score;
 };
-
-/////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////
 
 template<typename State>
 Node<State>::Node ( State const & state ) :
@@ -259,9 +256,7 @@ std::string Node<State>::indent_string ( int indent ) const {
     return s;
 }
 
-/////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////
-
+// Walltime.
 inline double wall_time ( ) noexcept {
     using Clock = std::chrono::high_resolution_clock;
     return double ( Clock::now ( ).time_since_epoch ( ).count ( ) ) * double ( Clock::period::num ) / double ( Clock::period::den );
@@ -411,9 +406,6 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
 
     return best_move;
 }
-
-/////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////
 
 inline void check ( bool expr, char const * message ) {
     if ( not expr )
