@@ -261,3 +261,4 @@ __pycache__/
 *.pyc
 /Mado/Mado - Copy.hpp
 /build
+/out/build/x64-Debug

@@ -10,8 +10,7 @@
 //
 // Monte Carlo Tree Search for finite games.
 //
-// Originally based on Python code at
-// http://mcts.ai/code/python.html
+// Originally based on Python code at http://mcts.ai/code/python.html
 //
 // Uses the "root parallelization" technique [1].
 //
@@ -112,15 +111,16 @@ static void assertion_failed ( char const * expr, char const * file, int line );
 // the rest of the tree is created by add_node.
 template<typename State>
 class Node {
+
     public:
-    typedef typename State::Move Move;
+    using Move = typename State::Move;
 
     Node ( State const & state );
-    Node ( const Node & ) = delete;
+    Node ( Node const & ) = delete;
 
-    ~Node ( );
+    ~Node ( ) noexcept;
 
-    Node & operator= ( const Node & ) = delete;
+    Node & operator= ( Node const & ) = delete;
     bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
     Move get_untried_move ( RandomEngine * engine ) const noexcept;
@@ -158,19 +158,18 @@ class Node {
 
 template<typename State>
 Node<State>::Node ( State const & state ) :
-    move ( State::no_move ), parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0 ), visits ( 0 ),
-    moves ( state.get_moves ( ) ), UCT_score ( 0 ) {}
+    move ( State::no_move ), parent ( nullptr ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ),
+    moves ( state.get_moves ( ) ), UCT_score ( 0.0 ) {}
 
 template<typename State>
 Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
-    move ( move_ ), parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0 ), visits ( 0 ),
-    moves ( state.get_moves ( ) ), UCT_score ( 0 ) {}
+    move ( move_ ), parent ( parent_ ), player_to_move ( state.player_to_move ), wins ( 0.0 ), visits ( 0 ),
+    moves ( state.get_moves ( ) ), UCT_score ( 0.0 ) {}
 
 template<typename State>
 Node<State>::~Node ( ) noexcept {
-    for ( auto child : children ) {
+    for ( auto child : children )
         delete child;
-    }
 }
 
 template<typename State>
@@ -190,7 +189,8 @@ template<typename State>
 Node<State> * Node<State>::best_child ( ) const noexcept {
     attest ( moves.empty ( ) );
     attest ( not children.empty ( ) );
-    return *std::max_element ( children.begin ( ), children.end ( ), [] ( Node * a, Node * b ) { return a->visits < b->visits; } );
+    return *std::max_element ( children.begin ( ), children.end ( ),
+                               [] ( Node * a, Node * b ) noexcept { return a->visits < b->visits; } );
     ;
 }
 
