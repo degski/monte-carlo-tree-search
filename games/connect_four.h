@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <iostream>
-using namespace std;
 
 #include <mcts.h>
 
@@ -17,7 +16,7 @@ class ConnectFourState {
 
     ConnectFourState ( int num_rows_ = 6, int num_cols_ = 7 ) :
         player_to_move ( 1 ), num_rows ( num_rows_ ), num_cols ( num_cols_ ), last_col ( -1 ), last_row ( -1 ) {
-        board.resize ( num_rows, vector<char> ( num_cols, player_markers[ 0 ] ) );
+        board.resize ( num_rows, std::vector<char> ( num_cols, player_markers[ 0 ] ) );
     }
 
     void do_move ( Move move ) {
