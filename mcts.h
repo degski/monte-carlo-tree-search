@@ -124,7 +124,8 @@ class alignas ( 64 ) Node {
     Node & operator= ( Node const & ) = delete;
     bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
-    Move get_untried_move ( RandomEngine * engine ) const noexcept;
+    // The move is removed from the vector.
+    Move get_untried_move ( RandomEngine * engine ) noexcept;
     Node * best_child ( ) const noexcept;
 
     bool has_children ( ) const noexcept { return not children.empty ( ); }
@@ -183,7 +184,7 @@ bool Node<State>::has_untried_moves ( ) const noexcept {
 
 template<typename State>
 template<typename RandomEngine>
-typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) const noexcept {
+typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) noexcept {
     attest ( not moves.empty ( ) );
     std::uniform_int_distribution<moves_size_type> moves_distribution ( 0, moves.size ( ) - 1 );
     return moves[ moves_distribution ( *engine ) ];
