@@ -9,7 +9,7 @@
 class ConnectFourState {
     public:
     using Move                = int;
-    using Moves               = sax::compact_vector<Move>;
+    using Moves               = sax::compact_vector<Move, std::int64_t, 7>;
     static const Move no_move = -1;
 
     static const char player_markers[ 3 ];

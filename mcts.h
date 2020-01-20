@@ -68,7 +68,7 @@
 #include <thread>
 #include <vector>
 
-#define USE_MIMALLOC false
+#include <sax/sfc.hpp>
 
 #include "../compact_vector/include/compact_vector.hpp"
 
@@ -196,16 +196,14 @@ Node<State> * Node<State>::best_child ( ) const noexcept {
     attest ( not children.empty ( ) );
     return *std::max_element ( children.begin ( ), children.end ( ),
                                [] ( Node * a, Node * b ) noexcept { return a->visits < b->visits; } );
-    ;
 }
 
 template<typename State>
 Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
     attest ( not children.empty ( ) );
-    for ( auto child : children ) {
+    for ( auto child : children )
         child->UCT_score = double ( child->wins ) / double ( child->visits ) +
                            std::sqrt ( 2.0 * std::log ( double ( this->visits ) ) / child->visits );
-    }
     return *std::max_element ( children.begin ( ), children.end ( ),
                                [] ( Node * a, Node * b ) { return a->UCT_score < b->UCT_score; } );
 }
@@ -216,7 +214,7 @@ Node<State> * Node<State>::add_child ( Move const & move, State const & state ) 
     children.push_back ( node );
     attest ( not children.empty ( ) );
     auto itr = moves.begin ( );
-    for ( ; itr != moves.end ( ) && *itr != move; ++itr )
+    for ( ; itr != moves.end ( ) and *itr != move; ++itr )
         ;
     attest ( itr != moves.end ( ) );
     std::iter_swap ( itr, moves.end ( ) - 1 );
@@ -271,7 +269,7 @@ template<typename State>
 std::unique_ptr<Node<State>> compute_tree ( State const root_state, const ComputeOptions options,
                                             std::mt19937_64::result_type initial_seed ) {
 
-    std::mt19937_64 random_engine ( initial_seed );
+    sax::sfc64 random_engine ( initial_seed );
 
     attest ( options.max_iterations >= 0 || options.max_time >= 0 );
     attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
