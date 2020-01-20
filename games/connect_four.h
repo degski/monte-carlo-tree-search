@@ -9,7 +9,7 @@
 class ConnectFourState {
     public:
     using Move                = int;
-    using Moves               = sax::compact_vector<Move, std::int64_t, 7>;
+    using Moves               = sax::compact_vector<Move, std::int64_t, 7, 7>;
     static const Move no_move = -1;
 
     static const char player_markers[ 3 ];
@@ -51,17 +51,12 @@ class ConnectFourState {
 
     bool has_moves ( ) const {
         check_invariant ( );
-
         char winner = get_winner ( );
-        if ( winner != player_markers[ 0 ] ) {
+        if ( winner != player_markers[ 0 ] )
             return false;
-        }
-
-        for ( int col = 0; col < num_cols; ++col ) {
-            if ( board[ 0 ][ col ] == player_markers[ 0 ] ) {
+        for ( int col = 0; col < num_cols; ++col )
+            if ( board[ 0 ][ col ] == player_markers[ 0 ] )
                 return true;
-            }
-        }
         return false;
     }
 
@@ -70,7 +65,7 @@ class ConnectFourState {
         Moves moves;
         if ( get_winner ( ) != player_markers[ 0 ] )
             return moves;
-        moves.reserve ( num_cols );
+        // moves.reserve ( num_cols ); no need to reserve, first allocation will be max.
         for ( int col = 0; col < num_cols; ++col )
             if ( board[ 0 ][ col ] == player_markers[ 0 ] )
                 moves.push_back ( col );
