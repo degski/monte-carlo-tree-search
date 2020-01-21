@@ -11,17 +11,14 @@
 template<std::size_t NumRows = 6, std::size_t NumCols = 7>
 class ConnectFourState {
     public:
-    using Move                = int;
-    using Moves               = sax::compact_vector<Move, std::int64_t, NumCols, NumCols>;
-    static const Move no_move = -1;
-    using Board               = ma::MatrixCM<char, NumRows, NumCols>;
+    using Move  = int;
+    using Moves = sax::compact_vector<Move, std::int64_t, NumCols, NumCols>;
+    using Board = ma::MatrixCM<char, NumRows, NumCols>;
 
     using ZobristHash     = std::uint64_t;
     using ZobristHashKeys = ma::Cube<ZobristHash, 2, NumRows, NumCols, 1>; // 2 players, 1 based.
 
-    static const char player_markers[ 3 ];
-
-    ConnectFourState ( ) : player_to_move ( 1 ), board ( player_markers[ 0 ] ), last_col ( -1 ), last_row ( -1 ) {}
+    ConnectFourState ( ) noexcept : player_to_move ( 1 ), board ( player_markers[ 0 ] ), last_col ( -1 ), last_row ( -1 ) {}
 
     // Returns the hash of the board xor'ed with the player's hash.
     // For outside consumption.
@@ -30,7 +27,7 @@ class ConnectFourState {
         return m_zobrist_hash ^ m_zobrist_player_keys[ player_to_move ];
     }
 
-    void do_move ( Move move ) {
+    void do_hash_move ( Move move ) {
         attest ( 0 <= move && move < NumCols );
         attest ( board ( 0, move ) == player_markers[ 0 ] );
 
@@ -45,7 +42,7 @@ class ConnectFourState {
         player_to_move = 3 - player_to_move;
     }
 
-    void do_hash_move ( Move move ) {
+    void do_move ( Move move ) {
         attest ( 0 <= move && move < NumCols );
         attest ( board ( 0, move ) == player_markers[ 0 ] );
 
@@ -165,7 +162,11 @@ class ConnectFourState {
         }
     }
 
-    void print ( ostream & out ) const noexcept {
+    int player_to_move;
+
+    private:
+    template<typename Stream>
+    void print ( Stream & out ) const noexcept {
         out << endl;
         out << " ";
         for ( int col = 0; col < NumCols - 1; ++col )
@@ -181,11 +182,25 @@ class ConnectFourState {
         for ( int col = 0; col < NumCols - 1; ++col )
             out << "--";
         out << "-+" << endl;
-        out << player_markers[ player_to_move ] << " to move " << endl << endl;
+        out << player_markers[ player_to_move ] << " to move " << endl
+            << "hash " << std::hex << zobrist ( ) << std::dec << endl
+            << endl;
     }
 
-    int player_to_move;
+    ZobristHash m_zobrist_hash = m_zobrist_player_keys[ 0 ]; // Hash of the current m_board, irrespective of who played last.
+    Board board;
+    int last_col, last_row;
 
+    public:
+    template<typename Stream>
+    [[maybe_unused]] friend Stream & operator<< ( Stream & out, const ConnectFourState & state ) {
+        state.print ( out );
+        return out;
+    }
+
+    static constexpr Move const no_move             = -1;
+    static constexpr int max_no_moves               = NumCols;
+    static constexpr char const player_markers[ 3 ] = { '.', 'X', 'O' };
     static constexpr ZobristHashKeys m_zobrist_keys = {
 
         0xa1a656cb9731c5d5ull, 0xc3dce6ad6465ea7aull, 0x9e2556e2bbec18d3ull, 0x900670630f4f76afull, 0xda8071005889fa3cull,
@@ -210,23 +225,7 @@ class ConnectFourState {
 
         0x41fec34015a1bef2ull, 0x8b80677c9c144514ull, 0xf6242292160d5bb7ull
     };
-    static constexpr int max_no_moves = NumCols;
 
-    private:
-    ZobristHash m_zobrist_hash = m_zobrist_player_keys[ 0 ]; // Hash of the current m_board, irrespective of who played last.
-
-    Board board;
-    int last_col, last_row;
+    // Spare hash keys...
+    // 0xe028283c7b3c8bc3ull, 0x0fce58188743146dull, 0x5c0d56eb69eac805ull
 };
-
-// Spare hash keys...
-// 0xe028283c7b3c8bc3ull, 0x0fce58188743146dull, 0x5c0d56eb69eac805ull
-
-template<std::size_t NumRow, std::size_t NumCols>
-ostream & operator<< ( ostream & out, const ConnectFourState<NumRow, NumCols> & state ) {
-    state.print ( out );
-    return out;
-}
-
-template<std::size_t NumRow, std::size_t NumCols>
-const char ConnectFourState<NumRow, NumCols>::player_markers[ 3 ] = { '.', 'X', 'O' };
