@@ -182,9 +182,7 @@ class ConnectFourState {
         for ( int col = 0; col < NumCols - 1; ++col )
             out << "--";
         out << "-+" << endl;
-        out << player_markers[ player_to_move ] << " to move " << endl
-            << "hash " << std::hex << zobrist ( ) << std::dec << endl
-            << endl;
+        out << player_markers[ player_to_move ] << " to move " << endl << std::hex << zobrist ( ) << std::dec << endl << endl;
     }
 
     ZobristHash m_zobrist_hash = m_zobrist_player_keys[ 0 ]; // Hash of the current m_board, irrespective of who played last.

@@ -115,15 +115,40 @@ class alignas ( 64 ) Node {
     using Move            = typename State::Move;
     using Moves           = typename State::Moves;
     using moves_size_type = typename Moves::size_type;
-    using Children        = sax::compact_vector<Node *>;
+    using Children        = sax::compact_vector<std::unique_ptr<Node>>;
     using ZobristHash     = typename State::ZobristHash;
+
+    /*
+
+    member variables             SZ
+
+    Node * const parent;          8
+    int const player_to_move;    12
+    int visits;                  16
+    double wins;                 24
+    Moves moves;                 32
+    Children children;           40
+    double UCT_score;            48
+    ZobristHash hash;            52
+    Move const move;             56
+
+    */
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
+    Node ( Node && other_ ) noexcept {
+        std::memcpy ( *this, &other, sizeof ( Node ) );
+        std::memset ( &other, 0, sizeof ( Node ) );
+    }
 
-    ~Node ( ) noexcept;
+    [[maybe_unused]] Node & operator= ( Node const & ) = delete;
+    [[maybe_unused]] Node & operator                   = ( Node && other_ ) noexcept {
+        moves.release ( );
+        children.release ( );
+        std::memcpy ( *this, &other_, sizeof ( Node ) );
+        other_.moves = other_.children = nullptr;
+    }
 
-    Node & operator= ( Node const & ) = delete;
     bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
     // The move is removed from the vector.
@@ -183,13 +208,6 @@ Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
     UCT_score ( 0.0 ), hash ( state.zobrist ( ) ), move ( move_ ) {}
 
 template<typename State>
-Node<State>::~Node ( ) noexcept {
-    if ( not children.empty ( ) )
-        for ( auto child : children )
-            delete child;
-}
-
-template<typename State>
 bool Node<State>::has_untried_moves ( ) const noexcept {
     return not moves.empty ( );
 }
@@ -205,23 +223,25 @@ template<typename State>
 Node<State> * Node<State>::best_child ( ) const noexcept {
     attest ( moves.empty ( ) );
     attest ( not children.empty ( ) );
-    return *std::max_element ( children.begin ( ), children.end ( ),
-                               [] ( Node * a, Node * b ) noexcept { return a->visits < b->visits; } );
+    return ( std::max_element ( children.begin ( ), children.end ( ),
+                                [] ( auto & a, auto & b ) noexcept { return a->visits < b->visits; } ) )
+        ->get ( );
 }
 
 template<typename State>
 Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
     attest ( not children.empty ( ) );
-    for ( auto child : children )
+    for ( auto & child : children )
         child->UCT_score = double ( child->wins ) / double ( child->visits ) +
                            std::sqrt ( 2.0 * std::log ( double ( this->visits ) ) / child->visits );
-    return *std::max_element ( children.begin ( ), children.end ( ),
-                               [] ( Node * a, Node * b ) { return a->UCT_score < b->UCT_score; } );
+    return ( std::max_element ( children.begin ( ), children.end ( ),
+                                [] ( auto & a, auto & b ) { return a->UCT_score < b->UCT_score; } ) )
+        ->get ( );
 }
 
 template<typename State>
 Node<State> * Node<State>::add_child ( Move const & move, State const & state ) {
-    return children.push_back ( new Node ( state, move, this ) );
+    return children.emplace_back ( new Node{ state, move, this } ).get ( );
 }
 
 template<typename State>
@@ -270,7 +290,6 @@ inline double wall_time ( ) noexcept {
 template<typename State>
 std::unique_ptr<Node<State>> compute_tree ( State const root_state, const ComputeOptions options,
                                             std::mt19937_64::result_type initial_seed ) {
-
     sax::sfc64 random_engine ( initial_seed );
 
     attest ( options.max_iterations >= 0 || options.max_time >= 0 );
@@ -327,7 +346,6 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, const Comput
 
 template<typename State>
 typename State::Move compute_move ( State const root_state, const ComputeOptions options ) {
-
     attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
 
     auto moves = root_state.get_moves ( );

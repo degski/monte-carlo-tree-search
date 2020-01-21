@@ -68,6 +68,8 @@ class Vector {
     constexpr Vector ( Args... a_ ) : m_data{ a_... } {}
     explicit constexpr Vector ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
+    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
     [[nodiscard]] constexpr iterator begin ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).begin ( ) ); }
@@ -152,6 +154,8 @@ class Matrix {
     template<typename... Args>
     constexpr Matrix ( Args... a_ ) : m_data{ a_... } {}
     explicit constexpr Matrix ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+
+    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
@@ -275,6 +279,8 @@ class Cube {
     constexpr Cube ( Args... a_ ) : m_data{ a_... } {}
     explicit constexpr Cube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
+    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
     [[nodiscard]] constexpr iterator begin ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).begin ( ) ); }
@@ -378,6 +384,8 @@ class HyperCube {
     template<typename... Args>
     constexpr HyperCube ( Args... a_ ) : m_data{ a_... } {}
     explicit constexpr HyperCube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+
+    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
