@@ -118,21 +118,17 @@ class alignas ( 64 ) Node {
     using Children        = sax::compact_vector<std::unique_ptr<Node>>;
     using ZobristHash     = typename State::ZobristHash;
 
-    /*
-
-    member variables             SZ
-
-    Node * const parent;          8
-    int const player_to_move;    12
-    int visits;                  16
-    double wins;                 24
-    Moves moves;                 32
-    Children children;           40
-    double UCT_score;            48
-    ZobristHash hash;            52
-    Move const move;             56
-
-    */
+    // member variables layout      SZ
+    //
+    // Node * const parent;          8
+    // int const player_to_move;    12
+    // int visits;                  16
+    // double wins;                 24
+    // Moves moves;                 32
+    // Children children;           40
+    // double UCT_score;            48
+    // ZobristHash const hash;      52
+    // Move const move;             56
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
@@ -143,10 +139,11 @@ class alignas ( 64 ) Node {
 
     [[maybe_unused]] Node & operator= ( Node const & ) = delete;
     [[maybe_unused]] Node & operator                   = ( Node && other_ ) noexcept {
-        moves.release ( );
-        children.release ( );
+        moves.reset ( );
+        children.reset ( );
         std::memcpy ( *this, &other_, sizeof ( Node ) );
-        other_.moves = other_.children = nullptr;
+        other_.moves.zap ( );
+        other_.children.zap ( );
     }
 
     bool has_untried_moves ( ) const noexcept;
@@ -193,8 +190,8 @@ class alignas ( 64 ) Node {
 
     static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
 
-    ZobristHash hash; // 52
-    Move const move;  // 56
+    ZobristHash const hash; // 52
+    Move const move;        // 56
 };
 
 template<typename State>
@@ -223,8 +220,8 @@ template<typename State>
 Node<State> * Node<State>::best_child ( ) const noexcept {
     attest ( moves.empty ( ) );
     attest ( not children.empty ( ) );
-    return ( std::max_element ( children.begin ( ), children.end ( ),
-                                [] ( auto & a, auto & b ) noexcept { return a->visits < b->visits; } ) )
+    return std::max_element ( children.begin ( ), children.end ( ),
+                              [] ( auto & a, auto & b ) noexcept { return a->visits < b->visits; } )
         ->get ( );
 }
 
@@ -234,8 +231,8 @@ Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
     for ( auto & child : children )
         child->UCT_score = double ( child->wins ) / double ( child->visits ) +
                            std::sqrt ( 2.0 * std::log ( double ( this->visits ) ) / child->visits );
-    return ( std::max_element ( children.begin ( ), children.end ( ),
-                                [] ( auto & a, auto & b ) { return a->UCT_score < b->UCT_score; } ) )
+    return std::max_element ( children.begin ( ), children.end ( ),
+                              [] ( auto & a, auto & b ) { return a->UCT_score < b->UCT_score; } )
         ->get ( );
 }
 
@@ -292,15 +289,15 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, const Comput
                                             std::mt19937_64::result_type initial_seed ) {
     sax::sfc64 random_engine ( initial_seed );
 
-    attest ( options.max_iterations >= 0 || options.max_time >= 0 );
-    attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
+    attest ( options.max_iterations >= 0 or options.max_time >= 0 );
+    attest ( root_state.player_to_move == 1 or root_state.player_to_move == 2 );
 
     auto root = std::unique_ptr<Node<State>> ( new Node<State> ( root_state ) );
 
     double start_time = wall_time ( );
     double print_time = start_time;
 
-    for ( int iter = 1; iter <= options.max_iterations || options.max_iterations < 0; ++iter ) {
+    for ( int iter = 1; iter <= options.max_iterations or options.max_iterations < 0; ++iter ) {
         auto node   = root.get ( );
         State state = root_state;
 
@@ -329,9 +326,9 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, const Comput
             node = node->parent;
         }
 
-        if ( options.verbose || options.max_time >= 0 ) {
+        if ( options.verbose or options.max_time >= 0 ) {
             double time = wall_time ( );
-            if ( options.verbose && ( time - print_time >= 1.0 || iter == options.max_iterations ) ) {
+            if ( options.verbose && ( time - print_time >= 1.0 or iter == options.max_iterations ) ) {
                 std::cerr << iter << " games played (" << double ( iter ) / ( time - start_time ) << " / second)." << std::endl;
                 print_time = time;
             }
@@ -346,7 +343,7 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, const Comput
 
 template<typename State>
 typename State::Move compute_move ( State const root_state, const ComputeOptions options ) {
-    attest ( root_state.player_to_move == 1 || root_state.player_to_move == 2 );
+    attest ( root_state.player_to_move == 1 or root_state.player_to_move == 2 );
 
     auto moves = root_state.get_moves ( );
 
