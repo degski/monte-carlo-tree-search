@@ -14,16 +14,14 @@ class ConnectFourState {
     using Move                = int;
     using Moves               = sax::compact_vector<Move, std::int64_t, NumCols, NumCols>;
     static const Move no_move = -1;
-    // using Board               = ma::MatrixChar<char, 6, 7>;
+    using Board               = ma::MatrixCM<char, NumRows, NumCols>;
 
     using ZobristHash     = std::uint64_t;
-    using ZobristHashKeys = ma::Cube<ZobristHash, 2, NumRows, NumCols, 1>; // 2 players, 1 based...
+    using ZobristHashKeys = ma::Cube<ZobristHash, 2, NumRows, NumCols, 1>; // 2 players, 1 based.
 
     static const char player_markers[ 3 ];
 
-    ConnectFourState ( ) : player_to_move ( 1 ), last_col ( -1 ), last_row ( -1 ) {
-        board.resize ( NumRows, std::vector<char> ( NumCols, player_markers[ 0 ] ) );
-    }
+    ConnectFourState ( ) : player_to_move ( 1 ), board ( player_markers[ 0 ] ), last_col ( -1 ), last_row ( -1 ) {}
 
     // Returns the hash of the board xor'ed with the player's hash.
     // For outside consumption.
@@ -34,32 +32,32 @@ class ConnectFourState {
 
     void do_move ( Move move ) {
         attest ( 0 <= move && move < NumCols );
-        attest ( board[ 0 ][ move ] == player_markers[ 0 ] );
+        attest ( board ( 0, move ) == player_markers[ 0 ] );
 
         int row = NumRows - 1;
-        while ( board[ row ][ move ] != player_markers[ 0 ] )
+        while ( board ( row, move ) != player_markers[ 0 ] )
             row--;
 
-        board[ row ][ move ] = player_markers[ player_to_move ];
-        last_col             = move;
-        last_row             = row;
+        board ( row, move ) = player_markers[ player_to_move ];
+        last_col            = move;
+        last_row            = row;
 
         player_to_move = 3 - player_to_move;
     }
 
     void do_hash_move ( Move move ) {
         attest ( 0 <= move && move < NumCols );
-        attest ( board[ 0 ][ move ] == player_markers[ 0 ] );
+        attest ( board ( 0, move ) == player_markers[ 0 ] );
 
         int row = NumRows - 1;
-        while ( board[ row ][ move ] != player_markers[ 0 ] )
+        while ( board ( row, move ) != player_markers[ 0 ] )
             row--;
 
         m_zobrist_hash ^=
             m_zobrist_keys.at ( player_to_move, row, move ); // player_to_move is here the player who is makeing a move.
-        board[ row ][ move ] = player_markers[ player_to_move ];
-        last_col             = move;
-        last_row             = row;
+        board ( row, move ) = player_markers[ player_to_move ];
+        last_col            = move;
+        last_row            = row;
 
         player_to_move = 3 - player_to_move;
     }
@@ -71,7 +69,7 @@ class ConnectFourState {
 
         while ( true ) {
             auto move = moves ( *engine );
-            if ( board[ 0 ][ move ] == player_markers[ 0 ] ) {
+            if ( board ( 0, move ) == player_markers[ 0 ] ) {
                 do_move ( move );
                 return;
             }
@@ -83,7 +81,7 @@ class ConnectFourState {
         if ( winner != player_markers[ 0 ] )
             return false;
         for ( int col = 0; col < NumCols; ++col )
-            if ( board[ 0 ][ col ] == player_markers[ 0 ] )
+            if ( board ( 0, col ) == player_markers[ 0 ] )
                 return true;
         return false;
     }
@@ -94,7 +92,7 @@ class ConnectFourState {
             return moves;
         // moves.reserve ( NumCols ); no need to reserve, first allocation will be max.
         for ( int col = 0; col < NumCols; ++col )
-            if ( board[ 0 ][ col ] == player_markers[ 0 ] )
+            if ( board ( 0, col ) == player_markers[ 0 ] )
                 moves.push_back ( col );
         return moves;
     }
@@ -103,12 +101,12 @@ class ConnectFourState {
         if ( last_col < 0 )
             return player_markers[ 0 ];
         // We only need to check around the last piece played.
-        auto piece = board[ last_row ][ last_col ];
+        auto piece = board ( last_row, last_col );
         // X X X X
         int left = 0, right = 0;
-        for ( int col = last_col - 1; col >= 0 && board[ last_row ][ col ] == piece; --col )
+        for ( int col = last_col - 1; col >= 0 && board ( last_row, col ) == piece; --col )
             left++;
-        for ( int col = last_col + 1; col < NumCols && board[ last_row ][ col ] == piece; ++col )
+        for ( int col = last_col + 1; col < NumCols && board ( last_row, col ) == piece; ++col )
             right++;
         if ( left + 1 + right >= 4 )
             return piece;
@@ -117,9 +115,9 @@ class ConnectFourState {
         // X
         // X
         int up = 0, down = 0;
-        for ( int row = last_row - 1; row >= 0 && board[ row ][ last_col ] == piece; --row )
+        for ( int row = last_row - 1; row >= 0 && board ( row, last_col ) == piece; --row )
             up++;
-        for ( int row = last_row + 1; row < NumRows && board[ row ][ last_col ] == piece; ++row )
+        for ( int row = last_row + 1; row < NumRows && board ( row, last_col ) == piece; ++row )
             down++;
         if ( up + 1 + down >= 4 )
             return piece;
@@ -129,9 +127,9 @@ class ConnectFourState {
         //    X
         up   = 0;
         down = 0;
-        for ( int row = last_row - 1, col = last_col - 1; row >= 0 && col >= 0 && board[ row ][ col ] == piece; --row, --col )
+        for ( int row = last_row - 1, col = last_col - 1; row >= 0 && col >= 0 && board ( row, col ) == piece; --row, --col )
             up++;
-        for ( int row = last_row + 1, col = last_col + 1; row < NumRows && col < NumCols && board[ row ][ col ] == piece;
+        for ( int row = last_row + 1, col = last_col + 1; row < NumRows && col < NumCols && board ( row, col ) == piece;
               ++row, ++col )
             down++;
         if ( up + 1 + down >= 4 )
@@ -142,9 +140,9 @@ class ConnectFourState {
         // X
         up   = 0;
         down = 0;
-        for ( int row = last_row + 1, col = last_col - 1; row < NumRows && col >= 0 && board[ row ][ col ] == piece; ++row, --col )
+        for ( int row = last_row + 1, col = last_col - 1; row < NumRows && col >= 0 && board ( row, col ) == piece; ++row, --col )
             up++;
-        for ( int row = last_row - 1, col = last_col + 1; row >= 0 && col < NumCols && board[ row ][ col ] == piece; --row, ++col )
+        for ( int row = last_row - 1, col = last_col + 1; row >= 0 && col < NumCols && board ( row, col ) == piece; --row, ++col )
             down++;
         if ( up + 1 + down >= 4 )
             return piece;
@@ -170,21 +168,18 @@ class ConnectFourState {
     void print ( ostream & out ) const noexcept {
         out << endl;
         out << " ";
-        for ( int col = 0; col < NumCols - 1; ++col ) {
+        for ( int col = 0; col < NumCols - 1; ++col )
             out << col << ' ';
-        }
         out << NumCols - 1 << endl;
         for ( int row = 0; row < NumRows; ++row ) {
             out << "|";
-            for ( int col = 0; col < NumCols - 1; ++col ) {
-                out << board[ row ][ col ] << ' ';
-            }
-            out << board[ row ][ NumCols - 1 ] << "|" << endl;
+            for ( int col = 0; col < NumCols - 1; ++col )
+                out << board ( row, col ) << ' ';
+            out << board ( row, NumCols - 1 ) << "|" << endl;
         }
         out << "+";
-        for ( int col = 0; col < NumCols - 1; ++col ) {
+        for ( int col = 0; col < NumCols - 1; ++col )
             out << "--";
-        }
         out << "-+" << endl;
         out << player_markers[ player_to_move ] << " to move " << endl << endl;
     }
@@ -220,7 +215,7 @@ class ConnectFourState {
     private:
     ZobristHash m_zobrist_hash = m_zobrist_player_keys[ 0 ]; // Hash of the current m_board, irrespective of who played last.
 
-    vector<vector<char>> board;
+    Board board;
     int last_col, last_row;
 };
 
