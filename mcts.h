@@ -116,6 +116,7 @@ class alignas ( 64 ) Node {
     using Moves           = typename State::Moves;
     using moves_size_type = typename Moves::size_type;
     using Children        = sax::compact_vector<Node *>;
+    using ZobristHash     = typename State::ZobristHash;
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
@@ -167,18 +168,19 @@ class alignas ( 64 ) Node {
 
     static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
 
-    Move const move; // 52
+    ZobristHash hash; // 52
+    Move const move;  // 56
 };
 
 template<typename State>
 Node<State>::Node ( State const & state ) :
     parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
-    UCT_score ( 0.0 ), move ( State::no_move ) {}
+    UCT_score ( 0.0 ), hash ( state.zobrist ( ) ), move ( State::no_move ) {}
 
 template<typename State>
 Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
     parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
-    UCT_score ( 0.0 ), move ( move_ ) {}
+    UCT_score ( 0.0 ), hash ( state.zobrist ( ) ), move ( move_ ) {}
 
 template<typename State>
 Node<State>::~Node ( ) noexcept {
