@@ -11,6 +11,8 @@ using namespace std;
 void main_program ( ) {
     using namespace std;
 
+    using State = ConnectFourState<6, 7>;
+
     bool human_player = true;
 
     Mcts::ComputeOptions player1_options, player2_options;
@@ -19,11 +21,11 @@ void main_program ( ) {
     player2_options.max_iterations = 10'000;
     player2_options.verbose        = true;
 
-    ConnectFourState state;
+    State state;
     while ( state.has_moves ( ) ) {
         cout << endl << "State: " << state << endl;
 
-        ConnectFourState::Move move = ConnectFourState::no_move;
+        State::Move move = State::no_move;
         if ( state.player_to_move == 1 ) {
             move = Mcts::compute_move ( state, player1_options );
             state.do_move ( move );
@@ -32,7 +34,7 @@ void main_program ( ) {
             if ( human_player ) {
                 while ( true ) {
                     cout << "Input your move: ";
-                    move = ConnectFourState::no_move;
+                    move = State::no_move;
                     cin >> move;
                     try {
                         state.do_move ( move );

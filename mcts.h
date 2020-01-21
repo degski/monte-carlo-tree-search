@@ -69,6 +69,7 @@
 #include <vector>
 
 #include <sax/sfc.hpp>
+#include <sax/uniform_int_distribution.hpp>
 
 #include "../compact_vector/include/compact_vector.hpp"
 
@@ -137,13 +138,13 @@ class alignas ( 64 ) Node {
     std::string to_string ( ) const;
     std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
 
-    Node * const parent; // 8
-    int const player_to_move;
+    Node * const parent;      // 8
+    int const player_to_move; // 12
 
     // std::atomic<double> wins;
     // std::atomic<int> visits;
 
-    int visits;
+    int visits;  // 16
     double wins; // 24
 
     Moves moves;       // 32
@@ -157,7 +158,16 @@ class alignas ( 64 ) Node {
     double UCT_score; // 48
 
     public:
-    Move const move; // 4
+    [[nodiscard]] static void * operator new ( std::size_t n_size_ ) {
+        if ( auto ptr = mi_malloc ( n_size_ ) )
+            return ptr;
+        else
+            throw std::bad_alloc{ };
+    }
+
+    static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
+
+    Move const move; // 52
 };
 
 template<typename State>
@@ -186,8 +196,7 @@ template<typename State>
 template<typename RandomEngine>
 typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) noexcept {
     attest ( not moves.empty ( ) );
-    std::uniform_int_distribution<moves_size_type> moves_distribution ( 0, moves.size ( ) - 1 );
-    return moves[ moves_distribution ( *engine ) ];
+    return moves.unordered_erase ( sax::uniform_int_distribution<moves_size_type> ( 0, moves.size ( ) - 1 ) ( *engine ) );
 }
 
 template<typename State>
@@ -210,16 +219,7 @@ Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
 
 template<typename State>
 Node<State> * Node<State>::add_child ( Move const & move, State const & state ) {
-    auto node = new Node ( state, move, this );
-    children.push_back ( node );
-    attest ( not children.empty ( ) );
-    auto itr = moves.begin ( );
-    for ( ; itr != moves.end ( ) and *itr != move; ++itr )
-        ;
-    attest ( itr != moves.end ( ) );
-    std::iter_swap ( itr, moves.end ( ) - 1 );
-    moves.resize ( moves.size ( ) - 1 );
-    return node;
+    return children.push_back ( new Node ( state, move, this ) );
 }
 
 template<typename State>
