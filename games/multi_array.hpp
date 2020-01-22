@@ -34,9 +34,35 @@
 
 namespace ma {
 
+namespace detail {
+// Integer LogN.
+template<int Base, typename T, typename sfinae = std::enable_if_t<std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>>
+constexpr T iLog ( const T n_, const T p_ = T ( 0 ) ) noexcept {
+    return n_ < Base ? p_ : iLog<Base, T, sfinae> ( n_ / Base, p_ + 1 );
+}
+
+// Integer Log2.
+template<typename T, typename = std::enable_if_t<std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>>
+constexpr T ilog2 ( const T n_ ) noexcept {
+
+    return iLog<2, T> ( n_ );
+}
+
+template<typename T, typename = std::enable_if_t<std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>>
+constexpr T next_power_2 ( const T n_ ) noexcept {
+    return n_ > 2 ? T ( 1 ) << ( ilog2<T> ( n_ - 1 ) + 1 ) : n_;
+}
+
+template<typename T, typename = std::enable_if_t<std::conjunction_v<std::is_integral<T>, std::is_unsigned<T>>>>
+constexpr bool is_power_2 ( const T n_ ) noexcept {
+    return n_ and not( n_ & ( n_ - 1 ) );
+}
+
+} // namespace detail
+
 template<typename T, std::intptr_t I, std::intptr_t BaseI = 0,
          typename = std::enable_if_t<std::is_default_constructible<T>::value, T>>
-class Vector {
+class alignas ( sizeof ( T ) * I > 32 ? 64 : sizeof ( T ) ) Vector {
 
     public:
     using value_type    = T;
@@ -149,7 +175,7 @@ class Vector {
 
 template<typename T, std::intptr_t I, std::intptr_t J, std::intptr_t BaseI = 0, std::intptr_t BaseJ = 0,
          typename = std::enable_if_t<std::is_default_constructible<T>::value, T>>
-class Matrix {
+class alignas ( sizeof ( T ) * I * J > 32 ? 64 : sizeof ( T ) ) Matrix {
 
     public:
     using value_type    = T;
@@ -299,7 +325,7 @@ using MatrixCM = Matrix<T, J, I, BaseJ, BaseI>;
 
 template<typename T, std::intptr_t I, std::intptr_t J, std::intptr_t K, std::intptr_t BaseI = 0, std::intptr_t BaseJ = 0,
          std::intptr_t BaseK = 0, typename = std::enable_if_t<std::is_default_constructible<T>::value, T>>
-class Cube {
+class alignas ( sizeof ( T ) * I * J * K > 32 ? 64 : sizeof ( T ) ) Cube {
 
     public:
     using value_type    = T;
@@ -435,7 +461,7 @@ class Cube {
 template<typename T, std::intptr_t I, std::intptr_t J, std::intptr_t K, std::intptr_t L, std::intptr_t BaseI = 0,
          std::intptr_t BaseJ = 0, std::intptr_t BaseK = 0, std::intptr_t BaseL = 0,
          typename = std::enable_if_t<std::is_default_constructible<T>::value, T>>
-class HyperCube {
+class alignas ( sizeof ( T ) * I * J * K * L > 32 ? 64 : sizeof ( T ) ) HyperCube {
 
     public:
     using value_type    = T;
