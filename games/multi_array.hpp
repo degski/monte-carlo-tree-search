@@ -75,7 +75,7 @@ class Vector {
     constexpr Vector ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Vector ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    [[nodiscard]] Vector & operator= ( Vector const & rhs_ ) {
+    [[nodiscard]] constexpr Vector & operator= ( Vector const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -110,35 +110,35 @@ class Vector {
     [[nodiscard]] constexpr const_iterator crend ( ) const noexcept { return rend ( ); }
     [[nodiscard]] constexpr iterator rend ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).rend ( ) ); }
 
-    [[nodiscard]] value_type & operator( ) ( size_type i_ ) noexcept { return at ( i_ ); }
-    [[nodiscard]] value_type operator( ) ( size_type i_ ) const noexcept { return at ( i_ ); }
+    [[nodiscard]] constexpr value_type & operator( ) ( size_type i_ ) noexcept { return at ( i_ ); }
+    [[nodiscard]] constexpr value_type operator( ) ( size_type i_ ) const noexcept { return at ( i_ ); }
 
-    [[nodiscard]] T & at ( size_type const i_ ) noexcept {
+    [[nodiscard]] constexpr T & at ( size_type const i_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         return ( m_data - BaseI )[ i_ ];
     }
 
-    [[nodiscard]] T at ( size_type const i_ ) const noexcept {
+    [[nodiscard]] constexpr T at ( size_type const i_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         return ( m_data - BaseI )[ i_ ];
     }
 
-    [[nodiscard]] T & at_r ( size_type const i_ ) noexcept {
+    [[nodiscard]] constexpr T & at_r ( size_type const i_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         return ( m_data + I - 1 + BaseI )[ -i_ ];
     }
 
-    [[nodiscard]] T at_r ( size_type const i_ ) const noexcept {
+    [[nodiscard]] constexpr T at_r ( size_type const i_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         return ( m_data + I - 1 + BaseI )[ -i_ ];
     }
 
-    [[nodiscard]] pointer data ( ) noexcept { return m_data; }
-    [[nodiscard]] const_pointer data ( ) const noexcept { return m_data; }
+    [[nodiscard]] constexpr pointer data ( ) noexcept { return m_data; }
+    [[nodiscard]] constexpr const_pointer data ( ) const noexcept { return m_data; }
 
     [[nodiscard]] static constexpr std::size_t size ( ) noexcept { return I; }
     [[nodiscard]] static constexpr std::size_t capacity ( ) noexcept { return size ( ); }
@@ -186,7 +186,7 @@ class Matrix {
     constexpr Matrix ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Matrix ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    [[nodiscard]] Matrix & operator= ( Matrix const & rhs_ ) {
+    [[nodiscard]] constexpr Matrix & operator= ( Matrix const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -223,10 +223,10 @@ class Matrix {
     [[nodiscard]] constexpr const_iterator crend ( ) const noexcept { return rend ( ); }
     [[nodiscard]] constexpr iterator rend ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).rend ( ) ); }
 
-    [[nodiscard]] value_type & operator( ) ( size_type i_, size_type j_ ) noexcept { return at ( i_, j_ ); }
-    [[nodiscard]] value_type operator( ) ( size_type i_, size_type j_ ) const noexcept { return at ( i_, j_ ); }
+    [[nodiscard]] constexpr value_type & operator( ) ( size_type i_, size_type j_ ) noexcept { return at ( i_, j_ ); }
+    [[nodiscard]] constexpr value_type operator( ) ( size_type i_, size_type j_ ) const noexcept { return at ( i_, j_ ); }
 
-    [[nodiscard]] T const & ref ( size_type const i_, size_type const j_ ) const noexcept {
+    [[nodiscard]] constexpr T const & ref ( size_type const i_, size_type const j_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -234,7 +234,7 @@ class Matrix {
         return ( m_data - BaseJ - BaseI * J )[ j_ + i_ * J ];
     }
 
-    [[nodiscard]] T & at ( size_type const i_, size_type const j_ ) noexcept {
+    [[nodiscard]] constexpr T & at ( size_type const i_, size_type const j_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -242,7 +242,7 @@ class Matrix {
         return ( m_data - BaseJ - BaseI * J )[ j_ + i_ * J ];
     }
 
-    [[nodiscard]] T at ( size_type const i_, size_type const j_ ) const noexcept {
+    [[nodiscard]] constexpr T at ( size_type const i_, size_type const j_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -251,7 +251,7 @@ class Matrix {
     }
 
     // Mirror the matrix coordinates.
-    [[nodiscard]] T const & ref_r ( size_type const i_, size_type const j_ ) noexcept {
+    [[nodiscard]] constexpr T const & ref_r ( size_type const i_, size_type const j_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -260,7 +260,7 @@ class Matrix {
     }
 
     // Mirror the matrix coordinates.
-    [[nodiscard]] T & at_r ( size_type const i_, size_type const j_ ) noexcept {
+    [[nodiscard]] constexpr T & at_r ( size_type const i_, size_type const j_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -269,7 +269,7 @@ class Matrix {
     }
 
     // Mirror the matrix coordinates.
-    [[nodiscard]] T at_r ( size_type const i_, size_type const j_ ) const noexcept {
+    [[nodiscard]] constexpr T at_r ( size_type const i_, size_type const j_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -277,8 +277,8 @@ class Matrix {
         return ( m_data + I * J - 1 + BaseJ + BaseI * J )[ -j_ - i_ * J ];
     }
 
-    [[nodiscard]] pointer data ( ) noexcept { return m_data; }
-    [[nodiscard]] const_pointer data ( ) const noexcept { return m_data; }
+    [[nodiscard]] constexpr pointer data ( ) noexcept { return m_data; }
+    [[nodiscard]] constexpr const_pointer data ( ) const noexcept { return m_data; }
 
     [[nodiscard]] static constexpr std::size_t size ( ) noexcept { return I * J; }
     [[nodiscard]] static constexpr std::size_t capacity ( ) noexcept { return size ( ); }
@@ -334,7 +334,7 @@ class Cube {
     constexpr Cube ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Cube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    [[nodiscard]] Cube & operator= ( Cube const & rhs_ ) {
+    [[nodiscard]] constexpr Cube & operator= ( Cube const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -371,10 +371,14 @@ class Cube {
     [[nodiscard]] constexpr const_iterator crend ( ) const noexcept { return rend ( ); }
     [[nodiscard]] constexpr iterator rend ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).rend ( ) ); }
 
-    [[nodiscard]] value_type & operator( ) ( size_type i_, size_type j_, size_type k_ ) noexcept { return at ( i_, j_, k_ ); }
-    [[nodiscard]] value_type operator( ) ( size_type i_, size_type j_, size_type k_ ) const noexcept { return at ( i_, j_, k_ ); }
+    [[nodiscard]] constexpr value_type & operator( ) ( size_type i_, size_type j_, size_type k_ ) noexcept {
+        return at ( i_, j_, k_ );
+    }
+    [[nodiscard]] constexpr value_type operator( ) ( size_type i_, size_type j_, size_type k_ ) const noexcept {
+        return at ( i_, j_, k_ );
+    }
 
-    [[nodiscard]] T & at ( size_type const i_, size_type const j_, size_type const k_ ) noexcept {
+    [[nodiscard]] constexpr T & at ( size_type const i_, size_type const j_, size_type const k_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -384,7 +388,7 @@ class Cube {
         return ( m_data + K * ( -BaseJ - BaseI * J ) - BaseK )[ K * ( j_ + i_ * J ) + k_ ];
     }
 
-    [[nodiscard]] T at ( size_type const i_, size_type const j_, size_type const k_ ) const noexcept {
+    [[nodiscard]] constexpr T at ( size_type const i_, size_type const j_, size_type const k_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -394,7 +398,7 @@ class Cube {
         return ( m_data + K * ( -BaseJ - BaseI * J ) - BaseK )[ K * ( j_ + i_ * J ) + k_ ];
     }
 
-    [[nodiscard]] T & at_r ( size_type const i_, size_type const j_, size_type const k_ ) noexcept {
+    [[nodiscard]] constexpr T & at_r ( size_type const i_, size_type const j_, size_type const k_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -404,7 +408,7 @@ class Cube {
         return ( m_data + I * J * K - 1 + BaseJ * K + BaseI * J * K + BaseK )[ K * ( -j_ - i_ * J ) - k_ ];
     }
 
-    [[nodiscard]] T at_r ( size_type const i_, size_type const j_, size_type const k_ ) const noexcept {
+    [[nodiscard]] constexpr T at_r ( size_type const i_, size_type const j_, size_type const k_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -414,8 +418,8 @@ class Cube {
         return ( m_data + I * J * K - 1 + BaseJ * K + BaseI * J * K + BaseK )[ K * ( -j_ - i_ * J ) - k_ ];
     }
 
-    [[nodiscard]] pointer data ( ) noexcept { return m_data; }
-    [[nodiscard]] const_pointer data ( ) const noexcept { return m_data; }
+    [[nodiscard]] constexpr pointer data ( ) noexcept { return m_data; }
+    [[nodiscard]] constexpr const_pointer data ( ) const noexcept { return m_data; }
 
     [[nodiscard]] static constexpr std::size_t size ( ) noexcept { return I * J * K; }
     [[nodiscard]] static constexpr std::size_t capacity ( ) noexcept { return size ( ); }
@@ -464,7 +468,7 @@ class HyperCube {
     constexpr HyperCube ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr HyperCube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    [[nodiscard]] HyperCube & operator= ( HyperCube const & rhs_ ) {
+    [[nodiscard]] constexpr HyperCube & operator= ( HyperCube const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -501,14 +505,14 @@ class HyperCube {
     [[nodiscard]] constexpr const_iterator crend ( ) const noexcept { return rend ( ); }
     [[nodiscard]] constexpr iterator rend ( ) noexcept { return const_cast<iterator> ( std::as_const ( *this ).rend ( ) ); }
 
-    [[nodiscard]] value_type & operator( ) ( size_type i_, size_type j_, size_type k_, size_type l_ ) noexcept {
+    [[nodiscard]] constexpr value_type & operator( ) ( size_type i_, size_type j_, size_type k_, size_type l_ ) noexcept {
         return at ( i_, j_, k_, l_ );
     }
-    [[nodiscard]] value_type operator( ) ( size_type i_, size_type j_, size_type k_, size_type l_ ) const noexcept {
+    [[nodiscard]] constexpr value_type operator( ) ( size_type i_, size_type j_, size_type k_, size_type l_ ) const noexcept {
         return at ( i_, j_, k_, l_ );
     }
 
-    [[nodiscard]] T & at ( size_type const i_, size_type const j_, size_type const k_, size_type const l_ ) noexcept {
+    [[nodiscard]] constexpr T & at ( size_type const i_, size_type const j_, size_type const k_, size_type const l_ ) noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -520,7 +524,7 @@ class HyperCube {
         return ( m_data + L * ( K * ( -BaseJ - BaseI * J ) - BaseK ) - BaseL )[ L * ( K * ( j_ + i_ * J ) + k_ ) + l_ ];
     }
 
-    [[nodiscard]] T at ( size_type const i_, size_type const j_, size_type const k_, size_type const l_ ) const noexcept {
+    [[nodiscard]] constexpr T at ( size_type const i_, size_type const j_, size_type const k_, size_type const l_ ) const noexcept {
         assert ( i_ >= BaseI );
         assert ( i_ < I + BaseI );
         assert ( j_ >= BaseJ );
@@ -532,8 +536,8 @@ class HyperCube {
         return ( m_data + L * ( K * ( -BaseJ - BaseI * J ) - BaseK ) - BaseL )[ L * ( K * ( j_ + i_ * J ) + k_ ) + l_ ];
     }
 
-    [[nodiscard]] pointer data ( ) noexcept { return m_data; }
-    [[nodiscard]] const_pointer data ( ) const noexcept { return m_data; }
+    [[nodiscard]] constexpr pointer data ( ) noexcept { return m_data; }
+    [[nodiscard]] constexpr const_pointer data ( ) const noexcept { return m_data; }
 
     [[nodiscard]] static constexpr std::size_t size ( ) noexcept { return I * J * K * L; }
     [[nodiscard]] static constexpr std::size_t capacity ( ) noexcept { return size ( ); }
