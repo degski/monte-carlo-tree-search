@@ -31,7 +31,7 @@
 //     // Returns a value in {0, 0.5, 1}.
 //     // This should not be an evaluation function, because it will only be
 //     // called for finished games. Return 0.5 to indicate a draw.
-//     double get_result(int current_player_to_move) const;
+//     float get_result(int current_player_to_move) const;
 //
 //     int player_to_move;
 //
@@ -79,7 +79,7 @@ struct ComputeOptions {
 
     int number_of_threads;
     int max_iterations;
-    double max_time;
+    float max_time;
     bool verbose;
 
     ComputeOptions ( ) :
@@ -109,7 +109,7 @@ static void assertion_failed ( char const * expr, char const * file, int line );
 // This class is used to build the game tree. The root is created by the users and
 // the rest of the tree is created by add_node.
 template<typename State>
-class alignas ( 64 ) Node {
+class Node {
 
     public:
     using Move            = typename State::Move;
@@ -125,14 +125,23 @@ class alignas ( 64 ) Node {
     // Node * const parent;          8   -8
     // int const player_to_move;    12
     // int visits;                  16
-    // double wins;                 24
-    // Moves moves;                 32
-    // Children children;           40
-    // double UCT_score;            48
-    // ZobristHash const hash;      52
-    // Move const move;             54   16
+    // int wins;                    20
+    // Moves moves;                 28
+    // Children children;           36   -8
+    // float UCT_score;             40
+    // ZobristHash const hash;      48
+    // Move const move;             50
 
-    Node ( State const & state );
+    Node ( State const & state ) :
+        parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
+        UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( State::no_move ) {}
+
+    private:
+    Node ( State const & state, Move const & move_, Node * parent_ ) :
+        parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
+        UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( move_ ) {}
+
+    public:
     Node ( Node const & ) = delete;
     Node ( Node && other_ ) noexcept {
         std::memcpy ( *this, &other, sizeof ( Node ) );
@@ -158,7 +167,7 @@ class alignas ( 64 ) Node {
 
     Node * select_child_UCT ( ) const noexcept;
     Node * add_child ( Move const & move, State const & state );
-    void update ( double result );
+    void update ( int result );
 
     std::string to_string ( ) const;
     std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
@@ -166,21 +175,19 @@ class alignas ( 64 ) Node {
     Node * const parent;      // 8
     int const player_to_move; // 12
 
-    // std::atomic<double> wins;
+    // std::atomic<float> wins;
     // std::atomic<int> visits;
 
-    int visits;  // 16
-    double wins; // 24
+    int visits; // 16
+    int wins;   // 20
 
-    Moves moves;       // 32
-    Children children; // 40
+    Moves moves;       // 28
+    Children children; // 36
 
     private:
-    Node ( State const & state, Move const & move, Node * parent );
-
     std::string indent_string ( int indent ) const;
 
-    double UCT_score; // 48
+    float UCT_score; // 40
 
     public:
     [[nodiscard]] static void * operator new ( std::size_t n_size_ ) {
@@ -192,19 +199,9 @@ class alignas ( 64 ) Node {
 
     static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
 
-    ZobristHash const hash; // 52
-    Move const move;        // 56
+    ZobristHash const hash; // 48
+    Move const move;        // 50
 };
-
-template<typename State>
-Node<State>::Node ( State const & state ) :
-    parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
-    UCT_score ( 0.0 ), hash ( state.zobrist ( ) ), move ( State::no_move ) {}
-
-template<typename State>
-Node<State>::Node ( State const & state, Move const & move_, Node * parent_ ) :
-    parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0.0 ), moves ( state.get_moves ( ) ),
-    UCT_score ( 0.0 ), hash ( state.zobrist ( ) ), move ( move_ ) {}
 
 template<typename State>
 bool Node<State>::has_untried_moves ( ) const noexcept {
@@ -231,8 +228,9 @@ template<typename State>
 Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
     attest ( not children.empty ( ) );
     for ( auto & child : children )
-        child->UCT_score = double ( child->wins ) / double ( child->visits ) +
-                           std::sqrt ( 2.0 * std::log ( double ( this->visits ) ) / child->visits );
+        child->UCT_score =
+            ( static_cast<double> ( child->wins ) / 2.0 ) / static_cast<double> ( child->visits ) +
+            std::sqrt ( 2.0 * std::log ( static_cast<double> ( this->visits ) ) / static_cast<double> ( child->visits ) );
     return std::max_element ( children.begin ( ), children.end ( ),
                               [] ( auto & a, auto & b ) { return a->UCT_score < b->UCT_score; } )
         ->get ( );
@@ -244,22 +242,22 @@ Node<State> * Node<State>::add_child ( Move const & move, State const & state ) 
 }
 
 template<typename State>
-void Node<State>::update ( double result ) {
+void Node<State>::update ( int result ) {
     visits++;
     wins += result;
-    // double my_wins = wins.load();
+    // int my_wins = wins.load();
     // while ( not  wins.compare_exchange_strong(my_wins, my_wins + result));
 }
 
 template<typename State>
 std::string Node<State>::to_string ( ) const {
-    std::stringstream sout;
-    sout << "["
-         << "P" << 3 - player_to_move << " "
-         << "M:" << move << " "
-         << "W/V: " << wins << "/" << visits << " "
-         << "U: " << moves.size ( ) << "]\n";
-    return sout.str ( );
+    std::stringstream ss;
+    ss << "["
+       << "P" << 3 - player_to_move << " "
+       << "M:" << move << " "
+       << "W/V: " << ( static_cast<double> ( wins ) / 2.0 ) << "/" << visits << " "
+       << "U: " << moves.size ( ) << "]\n";
+    return ss.str ( );
 }
 
 template<typename State>
@@ -304,7 +302,7 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, const Comput
         State state = root_state;
 
         // Select a path through the tree to a leaf node.
-        while ( not node->has_untried_moves ( ) && node->has_children ( ) ) {
+        while ( not node->has_untried_moves ( ) and node->has_children ( ) ) {
             node = node->select_child_UCT ( );
             state.do_move ( node->move );
         }
@@ -376,7 +374,7 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
 
     // Merge the children of all root nodes.
     std::map<typename State::Move, int> visits;
-    std::map<typename State::Move, double> wins;
+    std::map<typename State::Move, int> wins;
 
     std::int64_t games_played = 0;
 
@@ -390,22 +388,22 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
     }
 
     // Find the node with the highest score.
-    double best_score              = -1;
+    float best_score               = -1;
     typename State::Move best_move = typename State::Move ( );
     for ( auto itr : visits ) {
         auto move = itr.first;
-        double v  = itr.second;
-        double w  = wins[ move ];
+        float v   = itr.second;
+        float w   = wins[ move ];
         // Expected success rate assuming a uniform prior (Beta(1, 1)).
         // https://en.wikipedia.org/wiki/Beta_distribution
-        double expected_success_rate = ( w + 1 ) / ( v + 2 );
+        float expected_success_rate = ( w + 1 ) / ( v + 2 );
         if ( expected_success_rate > best_score ) {
             best_move  = move;
             best_score = expected_success_rate;
         }
 
         if ( options.verbose ) {
-            std::cerr << "Move: " << itr.first << " (" << setw ( 2 ) << right << int ( 100.0 * v / double ( games_played ) + 0.5 )
+            std::cerr << "Move: " << itr.first << " (" << setw ( 2 ) << right << int ( 100.0 * v / float ( games_played ) + 0.5 )
                       << "% visits)"
                       << " (" << setw ( 2 ) << right << int ( 100.0 * w / v + 0.5 ) << "% wins)" << std::endl;
         }
@@ -415,14 +413,14 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
         auto best_wins   = wins[ best_move ];
         auto best_visits = visits[ best_move ];
         std::cerr << "----" << std::endl;
-        std::cerr << "Best: " << best_move << " (" << 100.0 * best_visits / double ( games_played ) << "% visits)"
+        std::cerr << "Best: " << best_move << " (" << 100.0 * best_visits / float ( games_played ) << "% visits)"
                   << " (" << 100.0 * best_wins / best_visits << "% wins)" << std::endl;
     }
 
     if ( options.verbose ) {
-        double time = wall_time ( );
-        std::cerr << games_played << " games played in " << double ( time - start_time ) << " s. "
-                  << "(" << double ( games_played ) / ( time - start_time ) << " / second, " << options.number_of_threads
+        float time = wall_time ( );
+        std::cerr << games_played << " games played in " << float ( time - start_time ) << " s. "
+                  << "(" << float ( games_played ) / ( time - start_time ) << " / second, " << options.number_of_threads
                   << " parallel jobs)." << std::endl;
     }
 
@@ -441,9 +439,9 @@ inline void assertion_failed ( char const * expr, char const * file_cstr, int li
     if ( pos == std::string::npos )
         pos = 0;
     file = file.substr ( pos + 1 ); // Returns empty string if pos + 1 == length.
-    std::stringstream sout;
-    sout << "Assertion failed: " << expr << " in " << file << ":" << line << ".";
-    throw std::runtime_error ( sout.str ( ).c_str ( ) );
+    std::stringstream ss;
+    ss << "Assertion failed: " << expr << " in " << file << ":" << line << ".";
+    throw std::runtime_error ( ss.str ( ).c_str ( ) );
 }
 
 } // namespace Mcts

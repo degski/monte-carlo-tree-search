@@ -146,20 +146,10 @@ class ConnectFourState {
         return player_markers[ 0 ];
     }
 
-    double get_result ( int current_player_to_move ) const {
+    int get_result ( int current_player_to_move ) const {
         dattest ( not has_moves ( ) );
-
         auto winner = get_winner ( );
-        if ( winner == player_markers[ 0 ] ) {
-            return 0.5;
-        }
-
-        if ( winner == player_markers[ current_player_to_move ] ) {
-            return 0.0;
-        }
-        else {
-            return 1.0;
-        }
+        return winner == player_markers[ 0 ] ? 1 : winner == player_markers[ current_player_to_move ] ? 0 : 2;
     }
 
     int player_to_move;
