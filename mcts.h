@@ -118,9 +118,11 @@ class alignas ( 64 ) Node {
     using Children        = sax::compact_vector<std::unique_ptr<Node>>;
     using ZobristHash     = typename State::ZobristHash;
 
+    // 6 * int for the tree              24
+
     // member variables layout      SZ
     //
-    // Node * const parent;          8
+    // Node * const parent;          8   -8
     // int const player_to_move;    12
     // int visits;                  16
     // double wins;                 24
@@ -128,7 +130,7 @@ class alignas ( 64 ) Node {
     // Children children;           40
     // double UCT_score;            48
     // ZobristHash const hash;      52
-    // Move const move;             56
+    // Move const move;             54   16
 
     Node ( State const & state );
     Node ( Node const & ) = delete;
