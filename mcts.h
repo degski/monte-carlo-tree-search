@@ -72,6 +72,7 @@
 #include <sax/uniform_int_distribution.hpp>
 
 #include "../compact_vector/include/compact_vector.hpp"
+#include "../MCTSSearchTree/include/flat_search_tree.hpp"
 
 namespace Mcts {
 
@@ -286,7 +287,7 @@ inline double wall_time ( ) noexcept {
 
 template<typename State>
 std::unique_ptr<Node<State>> compute_tree ( State const root_state, const ComputeOptions options,
-                                            std::mt19937_64::result_type initial_seed ) {
+                                            sax::sfc64::result_type initial_seed ) {
     sax::sfc64 random_engine ( initial_seed );
 
     attest ( options.max_iterations >= 0 or options.max_time >= 0 );
