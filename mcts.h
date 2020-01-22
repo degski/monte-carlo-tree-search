@@ -148,7 +148,7 @@ class alignas ( 64 ) Node {
 
     bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
-    // The move is removed from the vector.
+    // The move is removed.
     Move get_untried_move ( RandomEngine * engine ) noexcept;
     Node * best_child ( ) const noexcept;
 

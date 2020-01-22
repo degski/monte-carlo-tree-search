@@ -61,14 +61,38 @@ class Vector {
     T m_data[ I ];
 
     public:
-    Vector ( ) : m_data{ T{} } {}
-    Vector ( const Vector & v_ ) { std::memcpy ( m_data, v_.m_data, I * sizeof ( T ) ); }
-    Vector ( Vector && v_ ) { std::memcpy ( m_data, v_.m_data, I * sizeof ( T ) ); }
+    Vector ( ) noexcept : m_data{ T{} } {}
+    Vector ( Vector const & o_ ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
+        }
+    }
+    Vector ( Vector && o_ ) noexcept = delete;
     template<typename... Args>
-    constexpr Vector ( Args... a_ ) : m_data{ a_... } {}
+    constexpr Vector ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Vector ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+    [[nodiscard]] Vector & operator= ( Vector const & rhs_ ) {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
+        }
+    }
+    [[nodiscard]] Vector & operator= ( Vector && ) noexcept = delete;
+
+    void clear ( ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memset ( this, 0, sizeof ( *this ) );
+        }
+        else {
+            std::fill ( begin ( ), end ( ), T{ } );
+        }
+    }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
@@ -148,14 +172,38 @@ class Matrix {
     T m_data[ I * J ];
 
     public:
-    Matrix ( ) : m_data{ T{} } {}
-    Matrix ( const Matrix & m_ ) { std::memcpy ( m_data, m_.m_data, I * J * sizeof ( T ) ); }
-    Matrix ( Matrix && m_ ) { std::memcpy ( m_data, m_.m_data, I * J * sizeof ( T ) ); }
+    Matrix ( ) noexcept : m_data{ T{} } {}
+    Matrix ( Matrix const & o_ ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
+        }
+    }
+    Matrix ( Matrix && o_ ) noexcept = delete;
     template<typename... Args>
-    constexpr Matrix ( Args... a_ ) : m_data{ a_... } {}
+    constexpr Matrix ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Matrix ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+    [[nodiscard]] Matrix & operator= ( Matrix const & rhs_ ) {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
+        }
+    }
+    [[nodiscard]] Matrix & operator= ( Matrix && ) noexcept = delete;
+
+    void clear ( ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memset ( this, 0, sizeof ( *this ) );
+        }
+        else {
+            std::fill ( begin ( ), end ( ), T{ } );
+        }
+    }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
@@ -272,14 +320,38 @@ class Cube {
     T m_data[ I * J * K ];
 
     public:
-    Cube ( ) : m_data{ T{} } {}
-    Cube ( Cube const & c_ ) { std::memcpy ( m_data, c_.m_data, I * J * K * sizeof ( T ) ); }
-    Cube ( Cube && c_ ) { std::memcpy ( m_data, c_.m_data, I * J * K * sizeof ( T ) ); }
+    Cube ( ) noexcept : m_data{ T{} } {}
+    Cube ( Cube const & o_ ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
+        }
+    }
+    Cube ( Cube && o_ ) noexcept = delete;
     template<typename... Args>
-    constexpr Cube ( Args... a_ ) : m_data{ a_... } {}
+    constexpr Cube ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr Cube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+    [[nodiscard]] Cube & operator= ( Cube const & rhs_ ) {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
+        }
+    }
+    [[nodiscard]] Cube & operator= ( Cube && ) noexcept = delete;
+
+    void clear ( ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memset ( this, 0, sizeof ( *this ) );
+        }
+        else {
+            std::fill ( begin ( ), end ( ), T{ } );
+        }
+    }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
@@ -379,13 +451,37 @@ class HyperCube {
 
     public:
     HyperCube ( ) noexcept : m_data{ T{} } {}
-    HyperCube ( HyperCube const & h_ ) { std::memcpy ( m_data, h_.m_data, I * J * K * L * sizeof ( T ) ); }
-    HyperCube ( HyperCube && h_ ) { std::memcpy ( m_data, h_.m_data, I * J * K * L * sizeof ( T ) ); }
+    HyperCube ( HyperCube const & o_ ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
+        }
+    }
+    HyperCube ( HyperCube && ) noexcept = delete;
     template<typename... Args>
-    constexpr HyperCube ( Args... a_ ) : m_data{ a_... } {}
+    constexpr HyperCube ( Args... a_ ) noexcept : m_data{ a_... } {}
     explicit constexpr HyperCube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
 
-    void clear ( ) noexcept { std::memset ( this, 0, sizeof ( *this ) ); }
+    [[nodiscard]] HyperCube & operator= ( HyperCube const & rhs_ ) {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
+        }
+        else {
+            std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
+        }
+    }
+    [[nodiscard]] HyperCube & operator= ( HyperCube && ) noexcept = delete;
+
+    void clear ( ) noexcept {
+        if constexpr ( std::is_arithmetic<T>::value ) {
+            std::memset ( this, 0, sizeof ( *this ) );
+        }
+        else {
+            std::fill ( begin ( ), end ( ), T{ } );
+        }
+    }
 
     [[nodiscard]] constexpr const_iterator begin ( ) const noexcept { return const_iterator{ m_data }; }
     [[nodiscard]] constexpr const_iterator cbegin ( ) const noexcept { return begin ( ); }
