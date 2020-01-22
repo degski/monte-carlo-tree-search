@@ -61,8 +61,8 @@ class Vector {
     T m_data[ I ];
 
     public:
-    Vector ( ) noexcept : m_data{ T{} } {}
-    Vector ( Vector const & o_ ) noexcept {
+    constexpr Vector ( ) noexcept : m_data{ T{} } {}
+    constexpr Vector ( Vector const & o_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
         }
@@ -70,12 +70,14 @@ class Vector {
             std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
         }
     }
-    Vector ( Vector && o_ ) noexcept = delete;
+    constexpr Vector ( Vector && ) noexcept = delete;
     template<typename... Args>
-    constexpr Vector ( Args... a_ ) noexcept : m_data{ a_... } {}
-    explicit constexpr Vector ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+    constexpr Vector ( Args... a_ ) noexcept : m_data{ std::forward<Args> ( a_ )... } {}
+    explicit constexpr Vector ( T const & value_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
+        std::fill ( begin ( ), end ( ), value_ );
+    }
 
-    [[nodiscard]] constexpr Vector & operator= ( Vector const & rhs_ ) {
+    [[nodiscard]] constexpr std::enable_if_t<std::is_copy_assignable<T>::value, Vector &> operator= ( Vector const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -83,9 +85,9 @@ class Vector {
             std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
         }
     }
-    [[nodiscard]] Vector & operator= ( Vector && ) noexcept = delete;
+    [[nodiscard]] constexpr Vector & operator= ( Vector && ) noexcept = delete;
 
-    void clear ( ) noexcept {
+    constexpr void clear ( ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memset ( this, 0, sizeof ( *this ) );
         }
@@ -172,8 +174,8 @@ class Matrix {
     T m_data[ I * J ];
 
     public:
-    Matrix ( ) noexcept : m_data{ T{} } {}
-    Matrix ( Matrix const & o_ ) noexcept {
+    constexpr Matrix ( ) noexcept : m_data{ T{} } {}
+    constexpr Matrix ( Matrix const & o_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
         }
@@ -181,12 +183,14 @@ class Matrix {
             std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
         }
     }
-    Matrix ( Matrix && o_ ) noexcept = delete;
+    constexpr Matrix ( Matrix && ) noexcept = delete;
     template<typename... Args>
-    constexpr Matrix ( Args... a_ ) noexcept : m_data{ a_... } {}
-    explicit constexpr Matrix ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+    constexpr Matrix ( Args... a_ ) noexcept : m_data{ std::forward<Args> ( a_ )... } {}
+    explicit constexpr Matrix ( T const & value_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
+        std::fill ( begin ( ), end ( ), value_ );
+    }
 
-    [[nodiscard]] constexpr Matrix & operator= ( Matrix const & rhs_ ) {
+    [[nodiscard]] constexpr std::enable_if_t<std::is_copy_assignable<T>::value, Matrix &> operator= ( Matrix const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -194,9 +198,9 @@ class Matrix {
             std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
         }
     }
-    [[nodiscard]] Matrix & operator= ( Matrix && ) noexcept = delete;
+    [[nodiscard]] constexpr Matrix & operator= ( Matrix && ) noexcept = delete;
 
-    void clear ( ) noexcept {
+    constexpr void clear ( ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memset ( this, 0, sizeof ( *this ) );
         }
@@ -320,8 +324,8 @@ class Cube {
     T m_data[ I * J * K ];
 
     public:
-    Cube ( ) noexcept : m_data{ T{} } {}
-    Cube ( Cube const & o_ ) noexcept {
+    constexpr Cube ( ) noexcept : m_data{ T{} } {}
+    constexpr Cube ( Cube const & o_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
         }
@@ -329,12 +333,14 @@ class Cube {
             std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
         }
     }
-    Cube ( Cube && o_ ) noexcept = delete;
+    constexpr Cube ( Cube && ) noexcept = delete;
     template<typename... Args>
-    constexpr Cube ( Args... a_ ) noexcept : m_data{ a_... } {}
-    explicit constexpr Cube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+    constexpr Cube ( Args... a_ ) noexcept : m_data{ std::forward<Args> ( a_ )... } {}
+    explicit constexpr Cube ( T const & value_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
+        std::fill ( begin ( ), end ( ), value_ );
+    }
 
-    [[nodiscard]] constexpr Cube & operator= ( Cube const & rhs_ ) {
+    [[nodiscard]] constexpr std::enable_if_t<std::is_copy_assignable<T>::value, Cube &> operator= ( Cube const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -342,9 +348,9 @@ class Cube {
             std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
         }
     }
-    [[nodiscard]] Cube & operator= ( Cube && ) noexcept = delete;
+    [[nodiscard]] constexpr Cube & operator= ( Cube && ) noexcept = delete;
 
-    void clear ( ) noexcept {
+    constexpr void clear ( ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memset ( this, 0, sizeof ( *this ) );
         }
@@ -454,8 +460,8 @@ class HyperCube {
     T m_data[ I * J * K * L ];
 
     public:
-    HyperCube ( ) noexcept : m_data{ T{} } {}
-    HyperCube ( HyperCube const & o_ ) noexcept {
+    constexpr HyperCube ( ) noexcept : m_data{ T{} } {}
+    constexpr HyperCube ( HyperCube const & o_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*o_.begin ( ), sizeof ( *this ) );
         }
@@ -463,12 +469,14 @@ class HyperCube {
             std::copy ( o_.begin ( ), o_.end ( ), begin ( ) );
         }
     }
-    HyperCube ( HyperCube && ) noexcept = delete;
+    constexpr HyperCube ( HyperCube && ) noexcept = delete;
     template<typename... Args>
-    constexpr HyperCube ( Args... a_ ) noexcept : m_data{ a_... } {}
-    explicit constexpr HyperCube ( T const & value_ ) noexcept { std::fill ( begin ( ), end ( ), value_ ); }
+    constexpr HyperCube ( Args... a_ ) noexcept : m_data{ std::forward<Args> ( a_ )... } {}
+    explicit constexpr HyperCube ( T const & value_, std::enable_if_t<std::is_copy_constructible<T>::value> * = nullptr ) noexcept {
+        std::fill ( begin ( ), end ( ), value_ );
+    }
 
-    [[nodiscard]] constexpr HyperCube & operator= ( HyperCube const & rhs_ ) {
+    [[nodiscard]] constexpr std::enable_if_t<std::is_copy_assignable<T>::value, HyperCube &> operator= ( HyperCube const & rhs_ ) {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memcpy ( &*begin ( ), &*rhs_.begin ( ), sizeof ( *this ) );
         }
@@ -476,9 +484,9 @@ class HyperCube {
             std::copy ( rhs_.begin ( ), rhs_.end ( ), begin ( ) );
         }
     }
-    [[nodiscard]] HyperCube & operator= ( HyperCube && ) noexcept = delete;
+    [[nodiscard]] constexpr HyperCube & operator= ( HyperCube && ) noexcept = delete;
 
-    void clear ( ) noexcept {
+    constexpr void clear ( ) noexcept {
         if constexpr ( std::is_arithmetic<T>::value ) {
             std::memset ( this, 0, sizeof ( *this ) );
         }
