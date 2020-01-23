@@ -246,6 +246,7 @@ template<typename State>
 void Node<State>::update ( double result ) {
     visits++;
     wins += result;
+
     // double my_wins = wins.load();
     // while ( not  wins.compare_exchange_strong(my_wins, my_wins + result));
 }
