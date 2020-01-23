@@ -72,6 +72,9 @@
 #include <sax/uniform_int_distribution.hpp>
 
 #include "../compact_vector/include/compact_vector.hpp"
+#include "../MCTSSearchTree/include/flat_search_tree_hash.hpp"
+
+#define USE_FSTH 0
 
 namespace Mcts {
 
@@ -106,6 +109,9 @@ static void assertion_failed ( char const * expr, char const * file, int line );
 #    define dattest( expr ) ( ( void ) 0 )
 #endif
 
+template<typename State>
+class Arc {};
+
 // This class is used to build the game tree. The root is created by the users and
 // the rest of the tree is created by add_node.
 template<typename State>
@@ -132,6 +138,15 @@ class Node {
     // ZobristHash const hash;      48
     // Move const move;             50
 
+#if USE_FSTH
+    Node ( State const & state ) :
+        player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ), UCT_score ( 0.0f ),
+        hash ( state.zobrist ( ) ), move ( State::no_move ) {}
+
+    Node ( State const & state, Move const & move_ ) :
+        player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ), UCT_score ( 0.0f ),
+        hash ( state.zobrist ( ) ), move ( move_ ) {}
+#else
     Node ( State const & state ) :
         parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
         UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( State::no_move ) {}
@@ -140,22 +155,20 @@ class Node {
     Node ( State const & state, Move const & move_, Node * parent_ ) :
         parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
         UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( move_ ) {}
+#endif
+
+#if USE_FSTH
+
+#else
+
+#endif
 
     public:
-    Node ( Node const & ) = delete;
-    Node ( Node && other_ ) noexcept {
-        std::memcpy ( *this, &other, sizeof ( Node ) );
-        std::memset ( &other, 0, sizeof ( Node ) );
-    }
-
-    [[maybe_unused]] Node & operator= ( Node const & ) = delete;
-    [[maybe_unused]] Node & operator                   = ( Node && other_ ) noexcept {
-        moves.reset ( );
-        children.reset ( );
-        std::memcpy ( *this, &other_, sizeof ( Node ) );
-        other_.moves.zap ( );
-        other_.children.zap ( );
-    }
+    Node ( Node const & )            = default;
+    Node ( Node && other_ ) noexcept = default;
+    ~Node ( ) noexcept               = default;
+    [[maybe_unused]] Node & operator= ( Node const & ) = default;
+    [[maybe_unused]] Node & operator= ( Node && ) noexcept = default;
 
     bool has_untried_moves ( ) const noexcept;
     template<typename RandomEngine>
@@ -171,18 +184,18 @@ class Node {
 
     std::string to_string ( ) const;
     std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
-
-    Node * const parent;      // 8
-    int const player_to_move; // 12
-
-    // std::atomic<float> wins;
-    // std::atomic<int> visits;
+#if not USE_FSTH
+    Node * parent; // 8
+#endif
+    int player_to_move; // 12
 
     int visits; // 16
     int wins;   // 20
 
-    Moves moves;       // 28
+    Moves moves; // 28
+#if not USE_FSTH
     Children children; // 36
+#endif
 
     private:
     std::string indent_string ( int indent ) const;
@@ -199,8 +212,8 @@ class Node {
 
     static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
 
-    ZobristHash const hash; // 48
-    Move const move;        // 50
+    ZobristHash hash; // 48
+    Move move;        // 50
 };
 
 template<typename State>
@@ -236,17 +249,22 @@ Node<State> * Node<State>::select_child_UCT ( ) const noexcept {
         ->get ( );
 }
 
+#if USE_FSTH
+template<typename State>
+NodeID Node<State>::add_child ( Move const & move, State const & state ) {
+    return children.emplace_back ( new Node{ state, move, this } ).get ( );
+}
+#else
 template<typename State>
 Node<State> * Node<State>::add_child ( Move const & move, State const & state ) {
     return children.emplace_back ( new Node{ state, move, this } ).get ( );
 }
+#endif
 
 template<typename State>
 void Node<State>::update ( int result ) {
     visits++;
     wins += result;
-    // int my_wins = wins.load();
-    // while ( not  wins.compare_exchange_strong(my_wins, my_wins + result));
 }
 
 template<typename State>
@@ -285,35 +303,69 @@ inline double wall_time ( ) noexcept {
 }
 
 template<typename State>
-std::unique_ptr<Node<State>> compute_tree ( State const root_state, const ComputeOptions options,
-                                            sax::sfc64::result_type initial_seed ) {
-    sax::sfc64 random_engine ( initial_seed );
+std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptions const options, sax::sfc64::result_type seed_ ) {
+
+    static_assert ( std::is_copy_assignable<Node<State>>::value, "Node<State> is not copy-assignable" );
+    static_assert ( std::is_move_assignable<Node<State>>::value, "Node<State> is not move-assignable" );
+
+    sax::sfc64 random_engine ( seed_ );
 
     attest ( options.max_iterations >= 0 or options.max_time >= 0 );
     attest ( root_state.player_to_move == 1 or root_state.player_to_move == 2 );
 
+#if USE_FSTH
+    using Dag    = fsth::SearchTree<Arc<State>, Node<State>>;
+    using NodeID = typename Dag::NodeID;
+
+    fsth::SearchTree<Arc<State>, Node<State>> dag ( root_state );
+#else
     auto root = std::unique_ptr<Node<State>> ( new Node<State> ( root_state ) );
+#endif
 
     double start_time = wall_time ( );
     double print_time = start_time;
 
     for ( int iter = 1; iter <= options.max_iterations or options.max_iterations < 0; ++iter ) {
-        auto node   = root.get ( );
+
+#if USE_FSTH
+        NodeID node = dag.root_node;
+#else
+        auto node = root.get ( );
+#endif
+
         State state = root_state;
 
         // Select a path through the tree to a leaf node.
+#if USE_FSTH
+        while ( auto & node_ref = dag[ node ]; not node_ref.has_untried_moves ( ) and node_ref.has_children ( ) ) {
+            node = node_ref.select_child_UCT ( );
+            state.do_move ( node_ref.move );
+        }
+#else
         while ( not node->has_untried_moves ( ) and node->has_children ( ) ) {
             node = node->select_child_UCT ( );
             state.do_move ( node->move );
         }
+#endif
 
         // If we are not already at the final state, expand the
         // tree with a new node and move there.
+#if USE_FSTH
+        if ( auto & node_ref = dag[ node ]; node_ref.has_untried_moves ( ) ) {
+            auto move = node_ref.get_untried_move ( &random_engine );
+            state.do_move ( move );
+            NodeID id = dag.contains ( state.zobrist ( ) ) )
+            if ( not id.value )
+                id = dag.addNode ( move, state );
+            dag.addArc ( node, id )
+        }
+#else
         if ( node->has_untried_moves ( ) ) {
             auto move = node->get_untried_move ( &random_engine );
             state.do_move ( move );
             node = node->add_child ( move, state );
         }
+#endif
 
         // We now play randomly until the game ends.
         while ( state.has_moves ( ) )
