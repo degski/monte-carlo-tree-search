@@ -68,7 +68,7 @@
 #include <thread>
 #include <vector>
 
-#include <sax/sfc.hpp>
+#include <sax/prng_sfc.hpp>
 #include <sax/uniform_int_distribution.hpp>
 
 #include "../compact_vector/include/compact_vector.hpp"
@@ -86,8 +86,8 @@ struct ComputeOptions {
     bool verbose;
 
     ComputeOptions ( ) :
-        number_of_threads ( 3 ), max_iterations ( 10'000 ), max_time ( -1.0 ), // default is no time limit.
-        verbose ( false ) {}
+        number_of_threads ( 4 ), max_iterations ( 1'000'000 ), max_time ( -1.0 ), // default is no time limit.
+        verbose ( true ) {}
 };
 
 template<typename State>
@@ -120,23 +120,10 @@ class Node {
     public:
     using Move            = typename State::Move;
     using Moves           = typename State::Moves;
+    using Player          = typename State::value_type;
     using moves_size_type = typename Moves::size_type;
     using Children        = sax::compact_vector<std::unique_ptr<Node>>;
     using ZobristHash     = typename State::ZobristHash;
-
-    // 6 * int for the tree              24
-
-    // member variables layout      SZ
-    //
-    // Node * const parent;          8   -8
-    // int const player_to_move;    12
-    // int visits;                  16
-    // int wins;                    20
-    // Moves moves;                 28
-    // Children children;           36   -8
-    // float UCT_score;             40
-    // ZobristHash const hash;      48
-    // Move const move;             50
 
 #if USE_FSTH
     Node ( State const & state ) :
@@ -148,12 +135,12 @@ class Node {
         hash ( state.zobrist ( ) ), move ( move_ ) {}
 #else
     Node ( State const & state ) :
-        parent ( nullptr ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
+        parent ( nullptr ), player_to_move ( state.playerToMove ( ) ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
         UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( State::no_move ) {}
 
     private:
     Node ( State const & state, Move const & move_, Node * parent_ ) :
-        parent ( parent_ ), player_to_move ( state.player_to_move ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
+        parent ( parent_ ), player_to_move ( state.playerToMove ( ) ), visits ( 0 ), wins ( 0 ), moves ( state.get_moves ( ) ),
         UCT_score ( 0.0f ), hash ( state.zobrist ( ) ), move ( move_ ) {}
 #endif
 
@@ -183,16 +170,15 @@ class Node {
     void update ( int result );
 
     std::string to_string ( ) const;
-    std::string tree_to_string ( int max_depth = 1000000, int indent = 0 ) const;
+    std::string tree_to_string ( int max_depth = 1'000'000, int indent = 0 ) const;
+
 #if not USE_FSTH
     Node * parent; // 8
 #endif
-    int player_to_move; // 12
-
-    int visits; // 16
-    int wins;   // 20
-
-    Moves moves; // 28
+    Player player_to_move; // 12
+    int visits;            // 16
+    float wins;            // 20
+    Moves moves;           // 28
 #if not USE_FSTH
     Children children; // 36
 #endif
@@ -203,28 +189,36 @@ class Node {
     float UCT_score; // 40
 
     public:
+    /*
     [[nodiscard]] static void * operator new ( std::size_t n_size_ ) {
         if ( auto ptr = mi_malloc ( n_size_ ) )
             return ptr;
-        else
+        else {
+            std::cout << "malloc err\n";
             throw std::bad_alloc{ };
+        }
     }
 
     static void operator delete ( void * ptr_ ) noexcept { mi_free ( ptr_ ); }
-
+    */
     ZobristHash hash; // 48
     Move move;        // 50
 };
 
 template<typename State>
 bool Node<State>::has_untried_moves ( ) const noexcept {
-    return not moves.empty ( );
+    return not moves.is_released ( );
 }
 
 template<typename State>
 template<typename RandomEngine>
 typename State::Move Node<State>::get_untried_move ( RandomEngine * engine ) noexcept {
     attest ( not moves.empty ( ) );
+    if ( 1 == moves.size ( ) ) {
+        Move m = moves.front ( );
+        moves.reset ( );
+        return m;
+    }
     return moves.unordered_erase ( sax::uniform_int_distribution<moves_size_type> ( 0, moves.size ( ) - 1 ) ( *engine ) );
 }
 
@@ -303,21 +297,20 @@ inline double wall_time ( ) noexcept {
 }
 
 template<typename State>
-std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptions const options, sax::sfc64::result_type seed_ ) {
-
+std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptions const options, sax::Rng::result_type seed_ ) {
     static_assert ( std::is_copy_assignable<Node<State>>::value, "Node<State> is not copy-assignable" );
     static_assert ( std::is_move_assignable<Node<State>>::value, "Node<State> is not move-assignable" );
-
-    sax::sfc64 random_engine ( seed_ );
-
+    sax::Rng random_engine ( seed_ );
     attest ( options.max_iterations >= 0 or options.max_time >= 0 );
-    attest ( root_state.player_to_move == 1 or root_state.player_to_move == 2 );
 
 #if USE_FSTH
     using Dag    = fsth::SearchTree<Arc<State>, Node<State>>;
     using NodeID = typename Dag::NodeID;
 
     fsth::SearchTree<Arc<State>, Node<State>> dag ( root_state );
+
+    std::vector<NodeID> parents{ dag.root_node };
+
 #else
     auto root = std::unique_ptr<Node<State>> ( new Node<State> ( root_state ) );
 #endif
@@ -328,6 +321,7 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
     for ( int iter = 1; iter <= options.max_iterations or options.max_iterations < 0; ++iter ) {
 
 #if USE_FSTH
+        parents.resize ( 1 );
         NodeID node = dag.root_node;
 #else
         auto node = root.get ( );
@@ -340,6 +334,7 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
         while ( auto & node_ref = dag[ node ]; not node_ref.has_untried_moves ( ) and node_ref.has_children ( ) ) {
             node = node_ref.select_child_UCT ( );
             state.do_move ( node_ref.move );
+            parents.push_back ( node );
         }
 #else
         while ( not node->has_untried_moves ( ) and node->has_children ( ) ) {
@@ -347,7 +342,6 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
             state.do_move ( node->move );
         }
 #endif
-
         // If we are not already at the final state, expand the
         // tree with a new node and move there.
 #if USE_FSTH
@@ -357,7 +351,8 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
             NodeID id = dag.contains ( state.zobrist ( ) ) )
             if ( not id.value )
                 id = dag.addNode ( move, state );
-            dag.addArc ( node, id )
+            dag.addArc ( node, id );
+            parents.push_back ( node = id );
         }
 #else
         if ( node->has_untried_moves ( ) ) {
@@ -368,16 +363,20 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
 #endif
 
         // We now play randomly until the game ends.
-        while ( state.has_moves ( ) )
-            state.do_random_move ( &random_engine );
+        state.simulate ( );
 
         // We have now reached a final state. Backpropagate the result
         // up the tree to the root node.
+#if USE_FSTH
+        auto const result = state.get_result ( dag[ node ].player_to_move );
+        std::for_each ( std::begin ( parents ), std::end ( parents ),
+                        [ result ] ( auto & n ) noexcept { dag[ n ].update ( result ); } );
+#else
         while ( node ) {
             node->update ( state.get_result ( node->player_to_move ) );
             node = node->parent;
         }
-
+#endif
         if ( options.verbose or options.max_time >= 0 ) {
             double time = wall_time ( );
             if ( options.verbose && ( time - print_time >= 1.0 or iter == options.max_iterations ) ) {
@@ -389,47 +388,34 @@ std::unique_ptr<Node<State>> compute_tree ( State const root_state, ComputeOptio
                 break;
         }
     }
-
     return root;
 }
 
 template<typename State>
-typename State::Move compute_move ( State const root_state, const ComputeOptions options ) {
-    attest ( root_state.player_to_move == 1 or root_state.player_to_move == 2 );
-
+typename State::Move compute_move ( State const root_state, ComputeOptions const options ) {
     auto moves = root_state.get_moves ( );
-
     attest ( moves.size ( ) > 0 );
-
     if ( moves.size ( ) == 1 )
         return moves[ 0 ];
-
     double start_time = wall_time ( );
-
     // Start all jobs to compute trees.
-    std::vector<future<std::unique_ptr<Node<State>>>> root_futures;
+    std::vector<std::future<std::unique_ptr<Node<State>>>> root_futures;
     ComputeOptions job_options = options;
     job_options.verbose        = false;
-
     for ( int t = 0; t < options.number_of_threads; ++t ) {
         auto func = [ t, &root_state, &job_options ] ( ) -> std::unique_ptr<Node<State>> {
-            return compute_tree ( root_state, job_options, 1012411 * t + 12515 );
+            return compute_tree ( root_state, job_options, 18'446'744'073'709'551'557ull * t + 0x0fce58188743146dull );
         };
         root_futures.push_back ( std::async ( std::launch::async, func ) );
     }
-
     // Collect the results.
     std::vector<std::unique_ptr<Node<State>>> roots;
-
     for ( int t = 0; t < options.number_of_threads; ++t )
         roots.push_back ( std::move ( root_futures[ t ].get ( ) ) );
-
     // Merge the children of all root nodes.
     std::map<typename State::Move, int> visits;
     std::map<typename State::Move, int> wins;
-
     std::int64_t games_played = 0;
-
     for ( int t = 0; t < options.number_of_threads; ++t ) {
         auto root = roots[ t ].get ( );
         games_played += root->visits;
@@ -438,7 +424,6 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
             wins[ ( *child )->move ] += ( *child )->wins;
         }
     }
-
     // Find the node with the highest score.
     float best_score               = -1;
     typename State::Move best_move = typename State::Move ( );
@@ -453,14 +438,12 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
             best_move  = move;
             best_score = expected_success_rate;
         }
-
         if ( options.verbose ) {
-            std::cerr << "Move: " << itr.first << " (" << setw ( 2 ) << right << int ( 100.0 * v / float ( games_played ) + 0.5 )
-                      << "% visits)"
-                      << " (" << setw ( 2 ) << right << int ( 100.0 * w / v + 0.5 ) << "% wins)" << std::endl;
+            std::cerr << "Move: " << itr.first << " (" << std::setw ( 2 ) << std::right
+                      << int ( 100.0 * v / float ( games_played ) + 0.5 ) << "% visits)"
+                      << " (" << std::setw ( 2 ) << std::right << int ( 100.0 * w / v + 0.5 ) << "% wins)" << std::endl;
         }
     }
-
     if ( options.verbose ) {
         auto best_wins   = wins[ best_move ];
         auto best_visits = visits[ best_move ];
@@ -468,14 +451,12 @@ typename State::Move compute_move ( State const root_state, const ComputeOptions
         std::cerr << "Best: " << best_move << " (" << 100.0 * best_visits / float ( games_played ) << "% visits)"
                   << " (" << 100.0 * best_wins / best_visits << "% wins)" << std::endl;
     }
-
     if ( options.verbose ) {
         float time = wall_time ( );
         std::cerr << games_played << " games played in " << float ( time - start_time ) << " s. "
                   << "(" << float ( games_played ) / ( time - start_time ) << " / second, " << options.number_of_threads
                   << " parallel jobs)." << std::endl;
     }
-
     return best_move;
 }
 
